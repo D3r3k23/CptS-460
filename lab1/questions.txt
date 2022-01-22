@@ -1,0 +1,28 @@
+1. On Intel x86 based PCs,druing booting, what does BIOS do?
+    Searches for a boot system on a drive, then loads it into memory
+
+   How many sectors does BIOS load from the boot device?
+    On a floppy disk, 1 sector. On a hard disk, 1 per partition
+
+   Where in memory does BIOS load the booter?
+    0x1000
+
+2. BIOS loads only 512 bytes of a booter into memory, which is only the
+   beginning part of the booter. How does the booter load the remaining part of
+   the booter into memory?
+    The booter locates the rest of the booter in the filesystem, and loads it into
+    memory at ES
+
+3. Assume a COMPLETE booter is loaded at the segment 0x9000. WHY do we have to
+   set the CPU's sgement registers CS,DS,SS,ES to 0x9000?
+    The CPU needs the segment registers set to the execution image in order to run it
+
+4. How do you find the file /boot/mtx?
+    1. Find the root inode by loading the GD block into memory
+    2. Search its data blocks to find the inode number of the "boot" directory
+    3. Find the inode of the "boot" directory
+    4. Repeat 2-4 to find the inode for "mtx inside the "boot" directory
+
+5. How to load the (disk) blocks of /boot/mtx to the segment 0x1000?
+    Call setes to set the ES to 0x1000, then call getblk with buf=0 so that
+    the block is loaded into 0x1000 instead of a buffer
