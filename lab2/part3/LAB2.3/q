@@ -1,0 +1,10 @@
+qemu-system-arm -M versatilepb -m 128M -kernel lab2.3.bin -serial mon:stdio
+
+
+
+ 
+
+
+
+
+
