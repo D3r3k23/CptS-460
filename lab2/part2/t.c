@@ -2,7 +2,6 @@
 #include "vid.c"
 
 int color;
-char *tab = "0123456789ABCDEF";
 
 extern char _binary_wsu_bmp_start;
 
