@@ -1,4 +1,5 @@
 /****************** vid.c file *******************/
+
 int volatile *fb; // display buffer
 
 int fbuf_init()
@@ -36,7 +37,7 @@ int show_bmp(char *p, int startRow, int startCol)
     // AS SHOWN, the picture is up-side DOWN
     r2 = 4 * ((3*w + 3) / 4); // row size is a multiple of 4 bytes
 
-    for (i = startRow; i < h + startRow; i++) {
+    for (i = startRow + h - 1; i >= startRow; i--) {
         pp = p;
 
         for (j = startCol; j < startCol + w; j++){
@@ -45,12 +46,12 @@ int show_bmp(char *p, int startRow, int startCol)
             r = *(pp + 2);
 
             pixel = (b << 16) + (g << 8) + r;
-            fb[640*i + j] = pixel;
+            fb[640*(i / 2) + (j / 2)] = pixel;
             pp += 3; // back pp by 3 bytes
         }
         p += r2;
     }
 
     // REQUIRED: use YOUR uprintf() of Part 1 to print h,w to UART0
-    // uprintf("\nBMP image height=%d width=%d\n", h, w);
+    uprintf(&uart[0], "\nBMP image height=%d width=%d\n", h, w);
 }

@@ -56,3 +56,85 @@ int uputs(UART *up, char *s)
 }
 
 /** WRITE YOUR uprintf(UART *up, char *fmt, . . .) for formatted print **/
+
+char* tab = "0123456789ABCDEF";
+
+int urpu(UART* up, unsigned int x)
+{
+    char c;
+    if (x) {
+        c = tab[x % 10];
+        urpu(up, x / 10);
+        uputc(up, c);
+    }
+}
+
+int xrpu(UART* up, unsigned int x)
+{
+    char c;
+    if (x) {
+        c = tab[x / 16];
+        urpu(up, x / 16);
+        uputc(up, c);
+    }
+}
+
+int uprintu(UART* up, unsigned int x)
+{
+    if (x == 0) {
+        uputc(up, '0');
+    } else {
+        urpu(up, x);
+    }
+}
+
+int uprintx(UART* up, unsigned int x)
+{
+    if (x == 0) {
+        uputc(up, '0');
+    } else {
+        xrpu(up, x);
+    }
+}
+
+int uprinti(UART* up, int x)
+{
+    if (x < 0) {
+        uputc(up, '-');
+        x = -x;
+    }
+    uprintu(up, x);
+
+}
+
+int uprintf(UART* up, char* fmt, ...)
+{
+    int* arg_ptr;
+    int i;
+    char c;
+
+    arg_ptr = (int*)&fmt + 1;
+    i = 0;
+
+    while (c = *fmt) {
+        if (c == '%') {
+            fmt++;
+            c = *fmt;
+            switch (c) {
+                case 'c': uputc(  up,         (char)*arg_ptr); break;
+                case 's': uputs(  up,        (char*)*arg_ptr); break;
+                case 'd': uprinti(up,          (int)*arg_ptr); break;
+                case 'u': uprintu(up, (unsigned int)*arg_ptr); break;
+                case 'x': uprintx(up, (unsigned int)*arg_ptr); break;
+                default:
+                    uputc(up, '%');
+                    continue;
+            }
+            arg_ptr++;
+        }
+        else {
+            uputc(up, c);
+        }
+        fmt++;
+    }
+}
