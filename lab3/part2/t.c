@@ -26,15 +26,17 @@ void timer_handler();
 #include "type.h"
 #include "string.c"
 
-int color;
+extern int color;
 
 #include "vid.c"
 #include "kbd.c"
 #include "timer.c"
 #include "exceptions.c"
 
-u32 *VIC_BASE = 0x10140000;
-u32 *SIC_BASE = 0x10003000;
+u32* VIC_BASE = (u32*)0x10140000;
+u32* SIC_BASE = (u32*)0x10003000;
+
+volatile int running = 0;
 
 void copy_vectors(void)
 {
@@ -75,7 +77,7 @@ int main()
 
    /***********
     #define SIC_intenable  0x08/4  // enabled interrupts: read-only
-    #define SIC_ENSET      0x08/4  // write to set SIC_intenable reg
+      #define SIC_ENSET      0x08/4  // write to set SIC_intenable reg
    ****************/
    *(SIC_BASE + SIC_ENSET)      |= (1<<3);        // SIC bit3 = KBD interrupts
 
@@ -86,5 +88,7 @@ int main()
    color = CYAN;
    kputs("in while(1) loop: enter keys from KBD\n");
 
-   while(1);
+   running = 1;
+   while (running);
+   kputs("Exiting\n");
 }

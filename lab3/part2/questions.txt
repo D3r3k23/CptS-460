@@ -1,0 +1,10 @@
+1. Draw a diagram to show the control flow of CPU when a KBD key is pressed
+
+in (6) ===============================>    (1) at irq_handler     : Execution changes from the user program to the vector table
+   (1) at LDR PC, irq_handler_addr ===>    (2)                    : Loads address of irq_handler procedure to PC
+in (2) ===============================>    (2) at bl IRQ_chandler : Branches to IRQ_chandler
+in (3) ===============================>    (3) at kbd_handler();  : Calls keyboard driver interrupt handler
+in (4) ===============================> in (4)                    : Finds the character entered from scan code
+   (4) at data = 1 ===================> in (3)                    : Returns to IRQ_chandler
+in (3) ===============================> in (2)                    : Returns to irq_handler
+in (2) ===============================> in (6)                    : Returns to user program execution
