@@ -127,7 +127,7 @@ void kbd_handler()
                 {
                     if (lowercase_char == 'c')
                     {
-                        kputs("Control-C key\n");
+                        kputs("Ctrl+C: Keyboard Interrupt\n");
                         running = 0;
                         return;
                     }
