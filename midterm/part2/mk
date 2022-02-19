@@ -1,0 +1,6 @@
+arm-none-eabi-as -mcpu=arm926ej-s -g ts.s -o ts.o
+arm-none-eabi-gcc -c -mcpu=arm926ej-s -g exceptions.c kbd.c queue.c string.c t.c timer.c vid.c wait.c
+arm-none-eabi-ld -T t.ld ts.o exceptions.o kbd.o queue.o string.o t.o timer.o vid.o wait.o -o t.elf
+arm-none-eabi-objcopy -O binary t.elf t.bin
+
+rm *.elf *.o
