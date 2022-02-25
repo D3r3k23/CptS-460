@@ -52,11 +52,14 @@ int pipe_writer()
 
         if (strcmp(line, "exit") == 0) {
             kexit(2);
-        }
+        } else {
+            print_pipe(kpipe);
+            printf("task%d writing line=[%s] to pipe\n", running->pid, line);
+            write_pipe(kpipe, line, strlen(line) - 1);
 
-        printf("task%d writing line=[%s] to pipe\n", running->pid, line);
-        write_pipe(kpipe, line, strlen(line));
-        printf("task%d wrote [%s] to pipe\n", running->pid,line);
+            print_pipe(kpipe);
+            printf("task%d wrote [%s] to pipe\n", running->pid,line);
+        }
     }
 }
 
@@ -70,8 +73,11 @@ int pipe_reader()
         if (n == 0) {
             kexit(1);
         } else {
+            print_pipe(kpipe);
             printf("proc%d reading %d chars from pipe\n", running->pid, n);
             n = read_pipe(kpipe, line, n);
+
+            print_pipe(kpipe);
             printf("proc%d read n=%d bytes from pipe : [", running->pid, n);
             for (int i = 0; i < n; i++) {
                 kputc(line[i]);

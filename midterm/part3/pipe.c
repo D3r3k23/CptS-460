@@ -134,3 +134,14 @@ int write_pipe(PIPE* p, char* buf, int n)
         return total;
     }
 }
+
+void print_pipe(PIPE* p)
+{
+    printf("[PIPE] data=%d | room=%d | nreader=%d | nwriter=%d | contents=[",
+        p->data, p->room, p->nreader, p->nwriter);
+
+    for (int i = 0; i < p->data; i++) {
+        printf("%c", p->buf[i]);
+    }
+    printf("]\n");
+}
