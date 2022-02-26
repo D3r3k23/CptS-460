@@ -112,7 +112,7 @@ int write_pipe(PIPE* p, char* buf, int n)
                 kexit(1);
                 return -1;
             } else {
-                while (p->data >= 0 && n >= 0) { // While the pipe has room
+                while (p->room >= 0 && n >= 0) { // While the pipe has room
                     p->buf[p->head] = *buf++; // Read data from buf, write into pipe
 
                     p->head = (p->head + 1) % PSIZE;
