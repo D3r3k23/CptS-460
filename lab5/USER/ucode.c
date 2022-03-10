@@ -64,24 +64,20 @@ int uwait()
     int pid, status;
     printf("syscall to kernel wait: ");
     pid = syscall(6, &status, 0, 0);
-    if (pid > 0) {
-        printf("proc %d waited a ZOMBIE child %d status=%d\n",
-        getpid(), pid, status);
-    }
+    if (pid > 0)
+        printf("proc %d waited a ZOMBIE child %d status=%d\n", getpid(), pid, status);
 }
 
 int uexit()
 {
-    int pid, status;
-    int exitValue;
     char line[64];
-
     printf("enter an exitValue : " );
     ugets(line);
-    exitValue = atoi(line);
+    printf("%c", '\n');
+    int exitValue = atoi(line);
 
     printf("syscall to kernel exit with %d\n", exitValue);
-    pid = syscall(7, exitValue, 0, 0);
+    int pid = syscall(7, exitValue, 0, 0);
 }
 
 int ugetc()

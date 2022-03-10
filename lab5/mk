@@ -1,4 +1,8 @@
-(cd USER; mku u1; mku u2)
+(
+    cd USER;
+    ./mku u1;
+    ./mku u2
+)
 
 arm-none-eabi-as -mcpu=arm926ej-s ts.s -o ts.o
 arm-none-eabi-gcc -c -mcpu=arm926ej-s t.c -o t.o

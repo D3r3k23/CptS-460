@@ -1,0 +1,86 @@
+Q1: trace syscall control flow:
+    Assume Process P1 executed    int pid = ukfork();
+----------------------------------------------------------
+Draw a diagram to show the execution sequence using the following components:
+
+1. int ukfork()
+   {
+     return syscall(5,0,0,0);
+   }
+
+2. syscall:
+       stmfd sp!, {lr}
+       swi #0
+       ldmfd sp!, {pc}
+
+3. vector_table:
+   0C: LDR PC svc_handler_addr
+
+   svc_handler_addr .word  svc_entry
+
+4. svc_entry:
+      stmfd sp!, {r0-r12, lr}
+      save Umode usp, upc,cpsr in PROC
+
+   bl svc_handler ==> where did CPU go? Name the function and what does it do?
+
+5. goUmode:
+      restore saved usp, cpsr from PROC
+      ensure r = kfork() as return value pid = ukfork() in Umode;
+      ldmfd sp!, {r0-r12, pc}^
+------------------------------------------------------------
+int pid = ukfork()
+    -> syscall(5): Interrupt
+        -> vector_table: svc_handler_addr
+            -> svc_entry: save CPU registers
+                -> svc_handler
+                    -> goUmode: Restore registers, return the syscall return value
+
+------------------------------------------------------------
+Q2:
+At 4: WHY do we have to save Umode usp, upc, cpsr in PROC?
+      HINT: What if P1 executed int r = uswitch() to switch process?
+
+    If the process is suspended while in umode, then its usp, upc, and cspr need to
+    be saved so they can be used when the process is resumed and then returned to umode
+
+At 5: How did the value r = kfork() in Kmode returned to Umode?
+
+    Place the return value in r0
+
+2. int kfork()
+{
+   PROC *p = newProc;
+
+2-1. To make P first resume from Kmode, then immediately goUmode to its VA(0),
+     p's kstack MUST contain 2 frames:
+
+High:
+   syscall frame: what's the return address to Umode? VA(0)
+                  what will be the parameter(s) to Umode code? a, b, c, d
+
+   tswitch frame: what's the resume address? upc
+                  Where is the Kmode return value when p resumes running? r0
+LOW
+
+   saved ksp of p = ? &p->kstack[SSIZE - 14]
+
+2-2. After resuming from Kmode, p executes goUmode() to return to Umode.
+     In order for p to execute from beginning of its Umode image, with a
+     proper Umode stack,
+
+     p's proc.usp = ? previous sp
+     p's proc.upc = ? lr
+     p's proc.cpsr= ? r7
+}
+
+------------------------------------------------------------
+Q3:
+All process VA in Kmode are the SAME (0 to 258MB):
+(1). WHY? So that the same umode image can be executed by different processes
+(2). How is this done? Mapping the virtual memory of each process to different blocks of physical memory
+(3). VA 0-258MB can only be RW by process in Kmode, HOW? By not mapping those VAs in umode
+
+Each process can RW its own VA=2GB to 2G+Uimage_size, HOW?
+
+    The VAs are mapping to physical addresses
