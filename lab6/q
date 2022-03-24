@@ -1,0 +1,1 @@
+qemu-system-arm -M versatilepb -m 256M -sd sdimage -kernel $1 -serial mon:stdio
