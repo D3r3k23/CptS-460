@@ -7,14 +7,4 @@ mount -o loop ../sdimage /mnt
 cp -av $1 /mnt/bin
 umount /mnt
 
-rm *.o
-
-
-
-
-
- 
-
-
-
-
+rm *.o *.elf
