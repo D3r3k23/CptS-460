@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define  BLOCK  3
 #define  ZOMBIE 4
 #define  printf  kprintf
- 
+
 typedef struct proc{
   struct proc *next;
   int    *ksp;
@@ -44,15 +44,15 @@ typedef struct proc{
   int    kstack[SSIZE];
 }PROC;
 ***************************/
-extern PROC *kfork();
+extern PROC *kfork(char* filename);
 PROC proc[NPROC], *freeList, *readyQueue, *sleepList, *running;
 int procsize = sizeof(PROC);
 char *pname[NPROC]={"sun", "mercury", "venus", "earth", "mars", "jupiter",
                      "saturn","uranus","neptune"};
 int init()
 {
-  int i, j; 
-  PROC *p; 
+  int i, j;
+  PROC *p;
 
   kprintf("kernel_init()\n");
   for (i=0; i<NPROC; i++){
@@ -68,12 +68,12 @@ int init()
   freeList = &proc[0];
   readyQueue = 0;
   sleepList = 0;
-  
+
   // creat P0 as running
   running = getproc();
   running->status = READY;
   running->pgdir = 0x4000;   // P0's pgdir at 16KB
-  
+
   printList(freeList);
   printQ(readyQueue);
   //kprintf("running = %d\n", running->pid);
@@ -98,7 +98,7 @@ int scheduler()
     printf("pgdir[2048] = %x\n", running->pgdir[2048]);
     switchPgdir((u32)running->pgdir);
   }
-}  
+}
 
 
 int kgetpid()
@@ -113,7 +113,7 @@ int kgetppid()
 char *pstatus[]={"FREE   ","READY  ","SLEEP  ","BLOCK  ","ZOMBIE ", " RUN  "};
 int kps()
 {
-  int i; PROC *p; 
+  int i; PROC *p;
   for (i=0; i<NPROC; i++){
      p = &proc[i];
      kprintf("proc[%d]: pid=%d ppid=%d", i, p->pid, p->ppid);
@@ -126,7 +126,7 @@ int kps()
 }
 
 int kchname(char *s)
-{ 
+{
   kprintf("kchname: name=%s\n", s);
   strcpy(running->name, s);
   return 123;

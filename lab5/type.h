@@ -20,8 +20,8 @@ typedef unsigned char  u8;
 typedef unsigned short u16;
 typedef unsigned int   u32;
 
-#define VA(x) (0x80000000 + (u32)x)
-#define PA(x) (0x80000000 - (u32)x)
+#define VA(x) (0x80000000 + (u32)(x))
+#define PA(x) (0x80000000 - (u32)(x))
 
 #define UART0_BASE_ADDR 0x101f1000
 #define UART0_DR   (*((volatile u32 *)(UART0_BASE_ADDR + 0x000)))
@@ -71,7 +71,7 @@ typedef unsigned int   u32;
 #define  BLOCK  3
 #define  ZOMBIE 4
 #define  printf  kprintf
- 
+
 typedef struct proc{
   struct proc *next;
 
@@ -94,7 +94,7 @@ typedef struct proc{
   int    kstack[SSIZE];
 }PROC;
 /**********************************************************************
-pgdir of PROC in ARM: 
+pgdir of PROC in ARM:
 initial plan: each PROC has a dedicated pgdir at 6M or 7MB by pid
 in 7MB: 4KB for each pgdir ==> has space for 1m/4K= 256 pgdirs
 defined as pgdir[256], for P0 to P255
@@ -149,7 +149,7 @@ typedef struct ext2_super_block {
 	 * the incompatible feature set is that if there is a bit set
 	 * in the incompatible feature set that the kernel doesn't
 	 * know about, it should refuse to mount the filesystem.
-	 * 
+	 *
 	 * e2fsck's requirements are more strict; if it doesn't know
 	 * about a feature in either the compatible or incompatible
 	 * feature set, it must abort and not try to meddle with

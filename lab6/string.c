@@ -59,6 +59,7 @@ int kstrcat(char *dest, char *src)
   }
   *dest = 0;
 }
+#define strcat(dest, src) kstrcat(dest, src)
 
 int atoi(char *s)
 {

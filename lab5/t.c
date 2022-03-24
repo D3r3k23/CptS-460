@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include "type.h"
 #include "string.c"
-#define VA(x) (0x80000000 + (u32)x)
+#define VA(x) (0x80000000 + (u32)(x))
 
 char *tab = "0123456789ABCDEF";
 int BASE;
