@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ********************************************************************/
 
-char* PATH = "/bin";
+char* PATH = "bin";
 
 int exec(char* cmdLine) // cmdline=VA in Uspace
 {
@@ -26,21 +26,12 @@ int exec(char* cmdLine) // cmdline=VA in Uspace
     strcpy(kline, cmdLine); // Fetch cmdLine into kernel space
 
     char* kp = kline;
-    while (*kp == ' ') {
-        kp++;
-    }
-    char arg0[32];
-    char* cp = arg0;
-    while (*kp != ' ' && *kp != '\n' && *kp != '\r' && cp < &arg0[31]) {
+    char filename[32];
+    char* cp = filename;
+    while (*kp != ' ' && *kp != '\n' && *kp != '\r' && cp < &filename[31]) {
         *cp++ = *kp++;
     }
     cp = '\0';
-
-    char filename[32];
-    if (!(arg0[0] == '/' || arg0[0] == '.' )) {
-        strcpy(filename, PATH);
-    }
-    strcat(filename, arg0);
 
     if (!load(filename, p)) {
         printf("Error: Could not load image\n");

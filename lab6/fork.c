@@ -103,34 +103,59 @@ int fork()
     // 2. write code to build pgidr and pgtable for p as in kfork()
     // 3. fork code as in Chapter 7.7.6
 
+    printf("P%d forking child\n", running->pid);
+
     PROC* p;
     if (!(p = getproc(&freeList))) {
         kprintf("fork failed\n");
         return -1;
     }
+    printf("Child: P%d\n", p->pid);
+
     p->ppid = running->pid;
     p->parent = running;
     p->status = READY;
     p->priority = 1;
 
-    char* PA = (char*)(running->pgdir[2048] & 0xFFFF0000); // parent Umode PA
-    char* CA = (char*)(p->pgdir[2048] & 0xFFFF0000);       // child Umode PA
+    // Build level-1 pgtable for p at 6MB + (pid-1)*16KB
+    // 1-level paging by 1MB sections
+    p->pgdir = (int*)(0x600000 + (p->pid-1) * 0x4000); // must be on 16KB boundary
 
-    // copy 1MB Umode image
+    // Initialize page table
+    int* ptable = p->pgdir;
+    for (int i = 0; i < 4096; i++)  // clear ptable entries
+        ptable[i] = 0;
+
+    // Kmode: ptable[0-257] ID map to 258 PA, Kmode RW but no Umode RW
+    int pentry = 0x412;   // 0x412 = |AP|0|DOMA|1|CB10|=|01|0|0000|1|0010|
+    for (int i = 0; i < 258; i++) {
+        ptable[i] = pentry;
+        pentry += 0x100000;
+    }
+    // Umode: ptable[2048] map to 1MB PA of proc at 8MB, 9MB, etc by pid
+    //|     addr     | |       |AP|0|DOM1|1|CB|10|
+    // 0xC12 = 1100 0001 0010 =|11|0|0001|1|00|10|               // AP=11 for Umode RW
+    ptable[2048] = (0x800000 + (p->pid - 1) * 0x100000) | 0xC32; // entry 2048 | 0xC32
+
+    // Copy 1MB Umode image
+    char* PA = (char*)((int)running->pgdir[2048] & 0xFFFF0000);
+    char* CA = (char*)((int)p->pgdir[2048] & 0xFFFF0000);
     memcpy(CA, PA, 0x100000);
 
-    // copy bottom 14 entries of kstack
+    // Copy bottom 14 entries of kstack
     for (int i = 1; i <= 14; i++) {
         p->kstack[SSIZE - i] = running->kstack[SSIZE - i];
     }
-    p->kstack[SSIZE - 14] = 0;            // child return pid = 0
-    p->kstack[SSIZE - 15] = (int)goUmode; // child resumes to goUmode
-    p->ksp = &(p->kstack[SSIZE - 28]);    // child save ksp
+    p->kstack[SSIZE - 14] = 0;            // Dhild returns pid =
+    p->kstack[SSIZE - 15] = (int)goUmode; // Child resumes to goUmode
+    // p->kstack[SSIZE - 1] = VA(0);
 
+    p->ksp = &p->kstack[SSIZE - 28];
     p->usp = running->usp;
     p->cpsr = running->cpsr;
 
     enqueue(&readyQueue, p);
 
+    printf("Fork succeeded\n");
     return p->pid;
 }
