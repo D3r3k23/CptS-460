@@ -1,0 +1,4 @@
+sudo ./mku init
+sudo ./mku sh
+sudo ./mku u1
+sudo ./mku u2
