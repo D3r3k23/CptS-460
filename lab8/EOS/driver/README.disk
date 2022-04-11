@@ -1,0 +1,72 @@
+1. mtximage is the FD image used in MTX
+2. cp mtximage mtx ==> make a copy of it as mtx
+3. mkmtx:
+     arm-none-eabi-objcopy -I binary -O elf32-littlearm -B arm mtx mtx.o
+     file mtx.o
+     nm -S -t d mtx.o
+   creates mtx.o (an ElF object file with RAW data from mtx).
+   The mtx.o file has ELF... at beginning;
+   The original mtx RAW data is at offset 0x34 or 52 bytes from beginning
+   It creates _binary_mtx_start, _binary_mtx_end, _binary_mtx_size at the
+   end of mtx.o
+
+   Apparently, it includes mtx.o inside the whole image file but export
+   _binary_mtx_start to C code. ==> must use &_binary_mtx_start to access
+   the actual mtx contents.
+
+4. t.ld for linker:
+/****************
+qemu with -kernel file.bin ==> start to execute from 0x10000 ==>
+file.bin must be loaded to 0x10000 ==> . = 0x10000
+************/
+/*ENTRY(vectors_start)*/
+ENTRY(reset_handler)
+SECTIONS
+{
+  . = 0x80010000;
+  .text : {
+      ts.o
+      t.o
+      user.o
+ }
+ .data : { 
+      ts.o(.data) 
+      t.o (.data)
+      user.o(.data)
+  }
+ .bss : { *(.bss) }
+  . = ALIGN(8);
+  . = . + 0x1000; /* 4kB of stack memory */
+  stack_top = .;
+  . = . + 0x1000; /* 4kB of irq stack memory */
+  irq_stack_top = .;
+
+  . = 0x80300000; /*ALIGN(1024);*/
+ .data : {
+     mtx.o
+ }
+}
+
+links mtx.o as a data section in the final kernel image.
+
+5. compile-link:
+/*********** t.ld file liner script ********************/
+KADDR=0x80010000
+arm-none-eabi-as -mcpu=arm926ej-s ts.s -o ts.o
+arm-none-eabi-as -mcpu=arm926ej-s us.s -o us.o
+
+arm-none-eabi-gcc -c -mcpu=arm926ej-s t.c -o t.o
+arm-none-eabi-gcc -c -mcpu=arm926ej-s user.c -o user.o
+arm-none-eabi-gcc -c -mcpu=arm926ej-s u2.c -o u2.o
+
+arm-none-eabi-ld -T t.ld ts.o us.o t.o user.o u2.o bbb.o -Ttext=0x80010000 -o t.elf
+arm-none-eabi-objcopy -O binary t.elf t.bin
+
+echo ready to go?
+read dummy
+
+qemu-system-arm -M versatilepb -m 128M -kernel t.bin -serial mon:stdio
+
+5. Execute:
+qemu-system-arm -M versatilepb -m 128M -kernel t.bin -serial mon:stdio
+
