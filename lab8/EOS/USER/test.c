@@ -9,5 +9,5 @@ int main(int argc, char* argv[])
     }
 
     printf("Exiting Test\n");
-    exit(0);
+    return 0;
 }
