@@ -1,0 +1,9 @@
+echo assemble ts.s
+arm-none-eabi-as -mcpu=arm926ej-s ts.s -o ts.o
+
+for NAME in exec fork except kernel load mes pipe queue signal string \
+syscall svc t thread wait 
+do
+   echo compile $NAME.c
+   arm-none-eabi-gcc -c -mcpu=arm926ej-s $NAME.c -o $NAME.o  #2> /dev/null 
+done

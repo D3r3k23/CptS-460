@@ -1,0 +1,26 @@
+
+echo compile drivers
+(cd ../driver; mk)
+
+echo compile fs
+(cd ../fs; mk 2> /dev/null)
+#(cd ../USER; mk 2> /dev/null)
+
+echo assemble ts.s
+arm-none-eabi-as -mcpu=arm926ej-s ts.s -o ts.o
+
+for NAME in exec fork except kernel load mes pipe queue signal string \
+syscall svc t thread wait 
+do
+   echo compile $NAME.c
+   arm-none-eabi-gcc -c -mcpu=arm926ej-s $NAME.c -o $NAME.o  #2> /dev/null 
+done
+
+echo linking 
+arm-none-eabi-ld -T t.ld *.o ../driver/*.o ../fs/*.o -Ttext=0x10000 -o t.elf
+arm-none-eabi-objcopy -O binary t.elf t.bin
+
+echo copy t.bin to ../
+cp -av t.bin ../
+
+rm *.o *.elf ../fs/*.o ../driver/*.o

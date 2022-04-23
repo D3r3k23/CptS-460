@@ -1,0 +1,366 @@
+/********************************************************************
+Copyright 2010-2017 K.C. Wang, <kwang@eecs.wsu.edu>
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+********************************************************************/
+
+/*
+ * ARM PrimeCell MultiMedia Card Interface - PL180
+ * Copyright (C) ST-Ericsson SA 2010
+ * Author: Ulf Hansson <ulf.hansson@stericsson.com>
+ * Author: Martin Lundholm <martin.xa.lundholm@stericsson.com>
+ * Ported to drivers/mmc/ by: Matt Waddel <matt.waddel@linaro.org>
+*/
+#include "../type.h"
+#define printf kprintf
+#include "sdc.h"
+
+struct mmc sdc;  // SDC structure of SD card
+
+int readl(u32 *addr){  return *(u32 *)addr; }
+int writel(u32 value, u32 *addr){ *(u32 *)addr = (u32)value; }
+
+int sdc_handler()
+{
+  printf("###### sdc interrupt ######\n");
+  while(1);
+}
+
+static int check_status(struct mmc *mp, struct mmc_cmd *cmd)
+{
+   u32 mmcstatus, statusmask;
+
+   statusmask = SDI_STA_CTIMEOUT | SDI_STA_CCRCFAIL;
+   if ((cmd->resp_type & MMC_RSP_PRESENT))
+	statusmask |= SDI_STA_CMDREND;
+   else
+	statusmask |= SDI_STA_CMDSENT;
+
+   do
+	mmcstatus = readl(&mp->base->status) & statusmask;
+   while (!mmcstatus);
+
+   writel(statusmask, &mp->base->status_clear);
+   if (mmcstatus & SDI_STA_CTIMEOUT) {
+	printf("CMD%d time out\n", cmd->cmdidx);
+	return -1;
+   } else if ((mmcstatus & SDI_STA_CCRCFAIL) && (cmd->flags & MMC_RSP_CRC)){
+             printf("CMD%d CRC error\n", cmd->cmdidx);
+	     return -2; 
+  }
+  /************* optional ***************************
+  if (cmd->resp_type & MMC_RSP_PRESENT) {
+      cmd->response[0] = readl(&mp->base->response0);
+      cmd->response[1] = readl(&mp->base->response1);
+      cmd->response[2] = readl(&mp->base->response2);
+      cmd->response[3] = readl(&mp->base->response3);
+
+      if (cmd->cmdidx==3){
+         printf("CMD%d response[0]:%x, response[1]:%x, "
+		"response[2]:%x, response[3]:%x\n",
+		cmd->cmdidx, cmd->response[0], cmd->response[1],
+		cmd->response[2], cmd->response[3]);
+	}
+
+  }
+  *************************************************/
+  return 0;
+}
+
+/* send command to the mmc card and wait for results */
+static int sdc_command(struct mmc *mp, struct mmc_cmd *cmd)
+{
+  int result;
+  u32 sdi_cmd = 0;
+
+  sdi_cmd = ((cmd->cmdidx & SDI_CMD_CMDINDEX_MASK) | SDI_CMD_CPSMEN);
+  if (cmd->resp_type) {
+		sdi_cmd |= SDI_CMD_WAITRESP;
+		if (cmd->resp_type & MMC_RSP_136)
+                    sdi_cmd |= SDI_CMD_LONGRESP;
+  }
+
+  writel((u32)cmd->cmdarg, &mp->base->argument);
+  udelay(COMMAND_REG_DELAY);
+  writel(sdi_cmd, &mp->base->command);
+  result = check_status(mp, cmd);
+
+  /**************** NOT NEEDED *************************
+  // After CMD2 set RCA to QEMU's default RCA=0x4567
+  if ((result == 0) && (cmd->cmdidx == MMC_CMD_ALL_SEND_CID))
+     mp->rca = 0x4567; // QEMU's RCA
+
+  // After CMD3 open drain is switched off and push pull is used
+  if ((result == 0) && (cmd->cmdidx == MMC_CMD_SET_RELATIVE_ADDR)) {
+     u32 sdi_pwr = readl(&mp->base->power) & ~SDI_PWR_OPD;
+     writel(sdi_pwr, &mp->base->power);
+  }
+  *******************************************************/
+  return result;
+}
+
+static int sdc_read(struct mmc *mp, char *buf)
+{
+  u32 *up = (u32 *)buf;
+  u32 count = 512;         // read one sector at a time
+  u32 status, status_err;
+
+  status = readl(&mp->base->status);
+  status_err = status & (SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT | SDI_STA_RXOVERR);
+  while ((!status_err) && (count >= sizeof(u32))) {
+	if (status & SDI_STA_RXDAVL) {
+	   *(up) = readl(&mp->base->fifo);
+           up++;
+	   count -= sizeof(u32);
+	}
+	status = readl(&mp->base->status);
+	status_err = status & (SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT |
+				       SDI_STA_RXOVERR);
+  }
+  status_err = status &
+    (SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT | SDI_STA_DBCKEND | SDI_STA_RXOVERR);
+  while (!status_err) {
+	status = readl(&mp->base->status);
+	status_err = status &
+    (SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT | SDI_STA_DBCKEND | SDI_STA_RXOVERR);
+  }
+  if (status & SDI_STA_DTIMEOUT) {
+     printf("Read data time out, count=%d, status=%x\n", count, status);
+     return -3; 
+  } else if (status & SDI_STA_DCRCFAIL) {
+	printf("Read data bytes CRC error: %x\n", status);
+	return -4; 
+  } else if (status & SDI_STA_RXOVERR) {
+	printf("Read data RX overflow error\n");
+	return -5; 
+  }
+  writel(SDI_ICR_MASK, &mp->base->status_clear);
+  if (count) {
+      printf("Read data error, count: %d\n", count);
+      return -6; 
+  }
+  return 0;
+}
+
+static int sdc_write(struct mmc *mp, char *buf)
+{
+
+  u32 *up = (u32 *)buf;
+  u32 count = 512;         // write one sector at a time
+  u32 status, status_err;
+  int i;
+  status = readl(&mp->base->status);
+  status_err = status & (SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT);
+  while (!status_err && count) {
+	if (status & SDI_STA_TXFIFOBW) {
+           if (count >= SDI_FIFO_BURST_SIZE * sizeof(u32)) {
+		for (i = 0; i < SDI_FIFO_BURST_SIZE; i++)
+			writel(*(up + i), &mp->base->fifo);
+		up += SDI_FIFO_BURST_SIZE;
+		count -= SDI_FIFO_BURST_SIZE * sizeof(u32);
+	   } else {
+		while (count >= sizeof(u32)) {
+			writel(*(up), &mp->base->fifo);
+                        up++;
+			count -= sizeof(u32);
+		}
+	   }
+	}
+	status = readl(&mp->base->status);
+	status_err = status & (SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT);
+  }
+  status_err = status &
+		(SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT | SDI_STA_DBCKEND);
+  while (!status_err) {
+	status = readl(&mp->base->status);
+	status_err = status &
+		(SDI_STA_DCRCFAIL | SDI_STA_DTIMEOUT | SDI_STA_DBCKEND);
+  }
+  if (status & SDI_STA_DTIMEOUT) {
+     printf("Write data time out, count=%d, status=%x\n", count, status);
+     return -3; 
+  } else if (status & SDI_STA_DCRCFAIL) {
+     printf("Write data CRC error\n");
+     return -4; 
+  }
+  writel(SDI_ICR_MASK, &mp->base->status_clear);
+  if (count) {
+     printf("Write data error, count=%d", count);
+     return -5; 
+  }
+  return 0;
+}
+
+static int sdc_rw(int rw, struct mmc *mp, struct mmc_cmd *cmd, char *buf)
+{
+  int error = -1; 
+  u32 blksz = 0;
+  u32 data_ctrl = 0;
+  u32 data_len = (u32)512;
+
+  // printf("sdc_rw: cmdidx=%d data->addr=%x\n", cmd->cmdidx, data->addr);
+
+  blksz = 0x9;  // 2**9=512 block size
+  data_ctrl |= ((blksz << 4) & SDI_DCTRL_DBLKSIZE_MASK);
+  data_ctrl |= SDI_DCTRL_DTEN;
+
+  writel(SDI_DTIMER_DEFAULT, &mp->base->datatimer);
+  writel(data_len, &mp->base->datalength);
+  udelay(DATA_REG_DELAY);
+
+  if (rw == READ) {
+	data_ctrl |= SDI_DCTRL_DTDIR_IN;
+	writel(data_ctrl, &mp->base->datactrl);
+	error = sdc_command(mp, cmd);
+	if (error)
+           return error;
+	error = sdc_read(mp, buf);
+
+  } else if (rw == WRITE) {
+	error = sdc_command(mp, cmd);
+	if (error)
+           return error;
+	writel(data_ctrl, &mp->base->datactrl);
+        error = sdc_write(mp, buf);
+  }
+  return error;
+}
+
+int udelay(int v)
+{ 
+  int i; for (i=0; i<v; i++);
+}
+
+// mmc initialization
+int mmc_init(struct mmc *mp)
+{
+  u32 sdi;
+  mp->base = (struct sdi_registers *)0x10005000;
+
+  // Initially set power-on, full voltage & MMCI read 
+  sdi = INIT_PWR;
+  writel(sdi, &mp->base->power);
+
+  // set clk freq 505KHz 
+  sdi = SDI_CLKCR_CLKDIV_INIT | SDI_CLKCR_CLKEN;
+  writel(sdi, &mp->base->clock);
+  udelay(CLK_CHANGE_DELAY);
+
+  // Disable mmc interrupts 
+  sdi = readl(&mp->base->mask0) & ~SDI_MASK0_MASK;
+  writel(sdi, &mp->base->mask0);
+
+  mp->clock = ARM_MCLK / (2 * (SDI_CLKCR_CLKDIV_INIT + 1));
+  return 0;
+}
+
+int init_cmd(int cmdidx, int resp, int arg)
+{
+  struct mmc *mp = &sdc;
+  struct mmc_cmd  cmd, *cp;
+
+  printf("CMD%d", cmdidx);
+  cp = &cmd;
+  cp->cmdidx = cmdidx;
+  cp->resp_type = resp;
+  cp->cmdarg = arg;
+  sdc_command(mp, cp);
+}
+
+int sdc_init()
+{
+  struct mmc *mp = &sdc;
+  u32 RCA = 0x45670000;     // QEMU's Relative Card Address (RCA)
+
+  printf("sdc_init: ");
+  mmc_init(mp);             // set mmc and base address
+
+  // set card power on and initial CLK rate
+  *(u32 *)(mp->base->power) = (u32)0xBF;
+  *(u32 *)(mp->base->clock) = (u32)0xC6;
+
+  // issue initialization CMD sequence
+  /************
+  init_cmd( 0, 0x0,  0);    // idle state
+  init_cmd(55, 0x15, 0);    // ready state  
+  init_cmd(41, 0x1,  1);    // argument must not be zero
+  init_cmd( 2, 0x7,  0);    // ask card CID
+  init_cmd( 3, 0x15, RCA);  // assign RCA
+  init_cmd( 9, 0x7,  RCA);  // ask card CSD: must use RCA
+  init_cmd(13, 0x15, RCA);  // ask card status: must use RCA 
+  init_cmd( 7, 0x15, RCA);  // get card to transfer state: must use RCA
+  init_cmd(16, 0x15, 512);  // set data block length
+  *********/
+
+  init_cmd( 0, MMC_RSP_NONE,  0);    // idle state
+  init_cmd(55, MMC_RSP_R1, 0);    // ready state  
+  init_cmd(41, MMC_RSP_R3, 1);    // argument must not be zero
+  init_cmd( 2, MMC_RSP_R2, 0);    // ask card CID
+  init_cmd( 3, MMC_RSP_R1, RCA);  // assign RCA
+  init_cmd( 9, MMC_RSP_R2, RCA);  // ask card CSD: must use RCA
+  init_cmd(13, MMC_RSP_R1, RCA);  // ask card status: must use RCA 
+  init_cmd( 7, MMC_RSP_R1, RCA);  // get card to transfer state: must use RCA
+  init_cmd(16, MMC_RSP_R1, 512);  // set data block length
+
+  // set interrupt MASK0 MASK1 registers bits = 0x240140 //
+  *(u32 *)(mp->base->mask0) = 0x002FFFFF;  // ALL status bits!
+  *(u32 *)(mp->base->mask1) = 0x002FFFFF;  // ALL status bits!
+  printf("done\n");
+}
+
+int getSector(int sector, char *buf)
+{
+  int i;
+  struct mmc *mp = &sdc;
+  struct mmc_cmd  cmd, *cp = &cmd;
+
+  //printf("getSector sector=%d buf=%x\n", sector, buf);
+  cp->cmdidx = 17;
+  cp->resp_type = MMC_RSP_R1;
+  cp->cmdarg = sector*512;     // start address on SD card    
+  for (i=0; i<4; i++)
+      cp->response[i] = 0;
+  cp->flags = 0;
+  sdc_rw(READ, mp, cp, buf);
+}
+
+int putSector(int sector, char *buf)
+{
+  int i;
+  struct mmc *mp = &sdc;
+  struct mmc_cmd  cmd, *cp = &cmd;
+
+  //printf("putSector sector=%d buf=%x\n", sector, buf);
+  cp->cmdidx = 24;
+  cp->resp_type = MMC_RSP_R1;
+  cp->cmdarg = sector*512;     // start address on SD card
+  for (i=0; i<4; i++)
+     cp->response[i] = 0;
+  cp->flags = 0;
+  sdc_rw(WRITE, mp, cp, buf);
+}
+ 
+int getblock(int blk, char *buf)
+{
+  //printf("getBlock(%d %x)\n", blk, buf);  
+  getSector(blk*2, buf);
+  getSector(blk*2+1, buf+512);
+}
+  
+int putblock(int blk, char *buf)
+{
+  //printf("putBlock(%d %x)\n", blk, buf);  
+  putSector(blk*2, buf);
+  putSector(blk*2+1, buf+512);
+}
+  

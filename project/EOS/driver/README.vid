@@ -1,0 +1,33 @@
+ /********* for VGA 640x480 ************************/
+  *(volatile unsigned int *)(0x1000001c) = 0x2C77;        // LCDCLK SYS_OSCCLK
+  *(volatile unsigned int *)(0x10120000) = 0x3F1F3F9C;    // time0
+  *(volatile unsigned int *)(0x10120004) = 0x090B61DF;    // time1
+  *(volatile unsigned int *)(0x10120008) = 0x067F1800;    // time2
+  /*
+  *(volatile unsigned int *)(0x10120010) = (1*1024*1024); // panelBaseAddress
+  */
+  *(volatile unsigned int *)(0x10120010) = (2*1024*1024); // panelBaseAddress
+  *(volatile unsigned int *)(0x10120018) = 0x82B;         // control register
+==============================================================================
+                      2-22-2015
+
+1. The line  
+  *(volatile unsigned int *)(0x10120010) = (2*1024*1024); // panelBaseAddress
+  sets the framebuffer's base address at 2MB.
+
+2. fb = (int *)(2*1024*1024);  // at 2MB area; enough for 800x600 SVGA
+   font = fonts0;              // use fonts0 for char bit patterns 
+   says fb = 2MB which is specified at 1.
+
+3. Originally, fb was set at 1MB.
+   When include a disk image as raw data, it occupies some of the 1MB area,
+   which interfers with fb at 1MB ==> noticed colored dots in display ==>
+   interfering with vid display ==> after printing the file contents of / 
+   directory in the disk image, vid goes wild and crashes.
+
+4. By moving vid's fb to 2MB, the problem disappered and OK.
+
+5. Also, in t.c biginning, before initialize vid, copied disk image from
+   &_binary_mtx_start to 3MB at 0x80300000, so that disk is now at
+   0x80300000 or 3MB. Seems working FINE.
+

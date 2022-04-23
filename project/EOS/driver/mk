@@ -1,0 +1,5 @@
+for NAME in disk sdc kbd pv timer uart vid
+do
+   echo compiling $NAME.c
+   arm-none-eabi-gcc -c -mcpu=arm926ej-s $NAME.c -o $NAME.o #2> /dev/null  
+done
