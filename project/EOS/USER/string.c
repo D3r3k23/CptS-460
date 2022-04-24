@@ -53,6 +53,11 @@ int strcmp(const char *s1, const char *s2)
   return *s1-*s2;
 }
 
+int streq(const char* s1, const char* s2)
+{
+  return strcmp(s1, s2) == 0;
+}
+
 char *strcpy(char *dest, const char *src) {
 	char *p = dest;
 	while ( (*dest++ = *src++))
@@ -126,7 +131,7 @@ void delay()
 {
    int i; for (i=0; i<10000; i++);
 }
- 
+
 int copy(char *dest, char *src)
 {
   int i;

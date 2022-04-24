@@ -42,7 +42,7 @@ PROC *kfork(char *filename)
   p->cpu = 0;
   p->type = PROCESS;
   p->cpsr = 0x10;
-  
+
   p->res->size = running->res->size;
   p->res->uid = running->res->uid;
   p->res->gid = running->res->gid;
@@ -50,7 +50,7 @@ PROC *kfork(char *filename)
   p->tcount = 1;
   p->res->cwd->refCount++;
   strcpy(p->res->tty, running->res->tty);
-  
+
   strcpy(p->res->name, "init");
   // p->res->signal, p->res->sig[] are cleared in kexit()
   p->res->signal = 0;
@@ -64,10 +64,10 @@ PROC *kfork(char *filename)
           p->res->fd[i]->refCount++;
   }
   /***** clear message queue ******/
-  p->res->mqueue = 0; 
+  p->res->mqueue = 0;
   p->res->mlock.value = 1; p->res->mlock.queue = 0;
   p->res->message.value = 0; p->res->message.queue = 0;
- 
+
   // set kstack to resume to body
   for (i=1; i<29; i++)  // all 28 cells = 0
     p->kstack[SSIZE-i] = 0;
@@ -77,7 +77,7 @@ PROC *kfork(char *filename)
   p->ksp = &(p->kstack[SSIZE-28]);
 
   // kstack must contain a resume frame FOLLOWed by a goUmode frame
-  //  VA(0)                                        
+  //  VA(0)
   //  -|-------- syscall frame --------------------
   //  ulr u12 u11 u10 u9 u8 u7 u6 u5 u4 u3 u2 u1 R0=return value to Umode
   //  ---------------------------------------------
@@ -87,12 +87,12 @@ PROC *kfork(char *filename)
   //  klr r12 r11 r10 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0
   //---------------------------------------------|---
   //  15  16  17  18  19 20 21 22 23 24 25 26 27 |28
-  //                                             ksp  
+  //                                             ksp
 
   // load filename to Umode image area at 8MB+(pid-1)*1MB
 
   load(filename, p); // p->PROC containing pid, pgdir, etc
- 
+
   // p's physical address is at PA=p->pgdir[2048] & 0xFFFFF000
   // its ustack top is at PA+1MB;
   // put istring in it, let p->usp be its VA pointing at the istring
@@ -101,7 +101,7 @@ PROC *kfork(char *filename)
   cp = (char *)PA;
   kstrcpy(cp, istring);
 
-  p->kstack[SSIZE-14] = (int)VA(0x100000 - 32); 
+  p->kstack[SSIZE-14] = (int)VA(0x100000 - 32);
   p->usp = (int *)VA(0x100000 - 32);
   p->upc = (int *)VA(0);
   p->kstack[SSIZE-1] = VA(0);
@@ -116,7 +116,7 @@ PROC *kfork(char *filename)
 
   enqueue(&readyQueue, p);
 
-  kprintf("proc %d kforked a child %d\n", running->pid, p->pid); 
+  // kprintf("proc %d kforked a child %d\n", running->pid, p->pid);
   printQ(readyQueue);
 
   return p;
@@ -137,7 +137,7 @@ int fork()
     return -1;
   }
   //printf("new=%d pgdir=%x\n", p->pid, p->res->pgdir);
-  
+
   /* initialize the new PROC and its kstack */
   p->status = READY;
   p->ppid = running->pid;
@@ -148,7 +148,7 @@ int fork()
   p->cpu = 0;
   p->type = PROCESS;
   p->cpsr = 0x10;
-  
+
   p->res->size = running->res->size;
   p->res->uid = running->res->uid;
   p->res->gid = running->res->gid;
@@ -156,13 +156,13 @@ int fork()
   p->tcount = 1;
   p->res->cwd->refCount++;
   strcpy(p->res->tty, running->res->tty);
-  
+
   // p->res->signal, p->res->sig[] are cleared in kexit()
   p->res->signal = 0;
   for (i=0; i<NSIG; i++)
     p->res->sig[i] = 0;
   /***** clear message queue ******/
-  p->res->mqueue = 0; 
+  p->res->mqueue = 0;
   p->res->mlock.value = 1; p->res->mlock.queue = 0;
   p->res->message.value = 0; p->res->message.queue = 0;
 
@@ -170,7 +170,7 @@ int fork()
 
   PBA = (running->res->pgdir[2048] & 0xFFF00000);
   //printf("FORK: parent %d uimage at %x\n", running->pid, PBA);
- 
+
   CBA = (p->res->pgdir[2048] & 0xFFF00000);
   // printf("FORK: child  %d uimage at %x\n", p->pid, CBA);
 
@@ -188,7 +188,7 @@ int fork()
   // child kstack must contain |parent kstack|goUmode stack|=> copy kstack
   //printf("copy kernel mode stack\n");
   // j = &running->kstack[SSIZE] - running->ksp;
- 
+
   // kstack syscall frame must be copied from parent's kstack, set R0=0
   //  1   2   3   4   5  6  7  8  9  10 11 12 13 14
   // ------------------------------------------------
@@ -200,7 +200,7 @@ int fork()
     p->kstack[SSIZE-i] = running->kstack[SSIZE-i];
     //printf("%x ", p->kstack[SSIZE-i]);
   }
-  
+
   p->kstack[SSIZE-14] = 0; // child return 0 pid in saved r0
 
   //printf("FIX UP child resume PC to %x\n", running->upc);
@@ -228,7 +228,7 @@ int fork()
 
   enqueue(&readyQueue, p);
 
-  kprintf("FORK: proc %d forked a child %d\n", running->pid, p->pid); 
+  // kprintf("FORK: proc %d forked a child %d\n", running->pid, p->pid);
   printQ(readyQueue);
 
   return p->pid;

@@ -24,13 +24,13 @@ int okToX(ip)
     MINODE *ip;
 {
   int uid, gid, fmode;
-  uid = running->res->uid; 
+  uid = running->res->uid;
   gid = running->res->gid;
 
-  if (uid == SUPER_USER)  
+  if (uid == SUPER_USER)
      return(1);
 
-  if (uid == ip->INODE.i_uid) 
+  if (uid == ip->INODE.i_uid)
      fmode = (ip->INODE.i_mode & OWNER) >> 6;
   else{
        if (gid == ip->INODE.i_gid)
@@ -47,28 +47,28 @@ int okToX(ip)
 int kchdir(char *y, int z)
 {
   DIR *dp; MINODE *ip, *newip;
-  int dev; 
+  int dev;
   u32 ino;
   char c;
   char pathname[32], temp[32];
 
   get_param(y, pathname);
 
-symlink:  
+symlink:
   if (strcmp(pathname, "/")==0){
- 
+
     ilock(running->res->cwd);
     iput(running->res->cwd);
 
     running->res->cwd = iget(root->dev, 2);
     iunlock(root);
-    
+
     return 0;
   }
 
-  if (pathname[0] == '/')  
+  if (pathname[0] == '/')
      dev = root->dev;
-  else                     
+  else
      dev = running->res->cwd->dev;
 
   strcpy(temp, pathname);
@@ -95,7 +95,7 @@ symlink:
     goto symlink;
   }
 
-  if ( (newip->INODE.i_mode & 0040000) == 0){  
+  if ( (newip->INODE.i_mode & 0040000) == 0){
     //prints("not a directory\n\r");
      iput(newip);
      return(-1);
@@ -116,12 +116,12 @@ symlink:
 
 /*********************************
 kpwd(wd) MINODE *wd;
-{ 
+{
   char myname[16];
   MINODE *parent, *ip;
-  u32 dev, myino, parentino; 
+  u32 dev, myino, parentino;
   DIR *dp;
-  MOUNT *mp; 
+  MOUNT *mp;
 
   if (wd == root){
       prints(" /");
@@ -168,11 +168,11 @@ int kgetcwd(char *y, char *z)
 }
 
 upwd(wd) MINODE *wd;
-{ 
+{
   char myname[16];
   MINODE *parent, *ip;
   int dev, myino, parentino; DIR *dp;
-  MOUNT *mp; 
+  MOUNT *mp;
 
   if (wd == root){
       strcpy(cwdname, "/");
