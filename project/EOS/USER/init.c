@@ -4,8 +4,8 @@ int login(const char* dev); // Returns pid
 
 int main(int argc, char* argv[])
 {
-    int Fin = open("/dev/tty0", O_RDONLY);
-    int Fout = open("/dev/tty0", O_WRONLY);
+    int stdin = open("/dev/tty0", O_RDONLY);
+    int stdout = open("/dev/tty0", O_WRONLY);
 
     int console = login("/dev/tty0");
     int S0 = login("/dev/ttyS0");
