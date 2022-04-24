@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
         } else if (pid == S1) {
             S1 = login("/dev/ttyS1");
         } else {
-            printf("init: buried an ORPHAN child P%d\n", pid);
+            printf("init: buried an ORPHAN child P%d, status=%d\n", pid, status);
         }
     }
 

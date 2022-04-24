@@ -34,13 +34,13 @@ int main(int argc, char* argv[])
         printf("password:");
         gets(password);
 
-        try_login(username, password);
+        login(username, password);
     }
 
     return 0;
 }
 
-void try_login(const char* username, const char* password)
+void login(const char* username, const char* password)
 {
     int passwd = open(PASSWORD_FILE, O_RDONLY);
 
@@ -49,14 +49,13 @@ void try_login(const char* username, const char* password)
 
     close(passwd);
 
-    char line[128];
+    char line[256];
     char* lp = line;
     for (int i = 0; i < n; i++) {
         if (buf[i] != '\n') {
             *lp++ = buf[i];
-        } else if (strlen(line) > 10) {
+        } else {
             *lp = '\0';
-
             char f_username[32]; get_password_field(line, 0, f_username);
             if (streq(f_username, username)) {
                 char f_password[32]; get_password_field(line, 1, f_password);
@@ -84,8 +83,10 @@ void try_login(const char* username, const char* password)
                     printf("Incorrect password\n");
                     return;
                 }
+            } else {
+                memset(line, 0, 128);
+                lp = line;
             }
-            memset(line, 0, 128);
         }
     }
     printf("Username: %s not found\n", username);
