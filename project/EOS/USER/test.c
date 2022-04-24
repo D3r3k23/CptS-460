@@ -5,7 +5,7 @@
 int main(int argc, char *argv[ ])
 {
   int i;
-  
+
   printf("this is a test\n");
 
   for (i=0; i<argc; i++){
@@ -14,5 +14,5 @@ int main(int argc, char *argv[ ])
 
   printf("end of test\n");
 
-  exit(0);
+  return 0;
 }

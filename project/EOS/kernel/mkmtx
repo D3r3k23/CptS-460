@@ -1,3 +1,0 @@
-arm-none-eabi-objcopy -I binary -O elf32-littlearm -B arm mtx mtx.o
-#file mtx.o
-#nm -S -t d mtx.o
