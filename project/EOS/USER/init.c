@@ -1,7 +1,5 @@
 #include "ucode.c"
 
-void parent(int console, int S0, int S1);
-
 int login(const char* dev); // Returns pid
 
 int main(int argc, char* argv[])
