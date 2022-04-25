@@ -95,11 +95,28 @@ typedef struct stat {
 #define EOF -1
 
 #define exit mexit
-/*
-#define O_RDONLY 0
-#define O_WRONLY 1
-#define O_RDWR   2
-*/
+
+#define C_ISNUMBER(c) (('0' <= (c)) && ((c) <= '9'))
+#define C_ISUPPER(c)  (('A' <= (c)) && ((c) <= 'Z'))
+#define C_ISLOWER(c)  (('a' <= (c)) && ((c) <= 'z'))
+
+char to_lower(char c)
+{
+   if (C_ISUPPER(c)) {
+      return c + 32;
+   } else {
+      return c;
+   }
+}
+
+char to_upper(char c)
+{
+   if (C_ISLOWER(c)) {
+      return c - 32;
+   } else {
+      return c;
+   }
+}
 
 int putc(char c)
 {

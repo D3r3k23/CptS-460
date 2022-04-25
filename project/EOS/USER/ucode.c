@@ -19,6 +19,9 @@ typedef unsigned char   u8;
 typedef unsigned short u16;
 typedef unsigned int   u32;
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 #include "uio.c"
 #include "crt0.c"
 #include "string.c"
