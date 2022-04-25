@@ -18,13 +18,10 @@ int main(int argc, char* argv[])
         int status;
         int pid = wait(&status);
 
-        if (pid == console) {
-            console = login("/dev/tty0");
-        } else if (pid == S0) {
-            S0 = login("/dev/ttyS0");
-        } else if (pid == S1) {
-            S1 = login("/dev/ttyS1");
-        } else {
+        if (pid == console) console = login("/dev/tty0");
+        else if (pid == S0)     S0 = login("/dev/ttyS0");
+        else if (pid == S1)    S1 = login("/dev/ttyS1");
+        else {
             // printf("init: buried an ORPHAN child P%d, status=%d\n", pid, status);
         }
     }

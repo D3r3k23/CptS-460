@@ -6,6 +6,7 @@
 
 int sh(const char* line);
 int source(const char* filename);
+int cd(const char* dir);
 
 int run_cmd(const char* cmd, const char** args, int nArgs);
 int cmd_exists(const char* cmd);
@@ -48,35 +49,25 @@ int sh(const char* line)
 
     const char* cmd = tokens[0];
     const char* args[16];
-    for (int i = 1; i < nTokens; i++) {
-        args[i - 1] = tokens[i];
-    }
     int nArgs = nTokens - 1;
-
-    if (streq(cmd, "source")) {
-        return source(args[1]);
-    } else if (streq(cmd, "logout")) {
+    for (int i = 0; i < 16; i++) {
+        if (i < nArgs) {
+            args[i] = tokens[i + 1];
+        } else {
+            args[i] = NULL;
+        }
+    }
+    if (streq(cmd, "logout")) {
         printf("Goodbye\n");
         exit(0);
-    } else if (streq(cmd, "pwd")) {
-        char cwd[64];
-        getcwd(cwd);
-        printf("%s\n", cwd);
-        return 0;
-    } else if (streq(cmd, "cd")) {
-        const char* dir;
-        if (nArgs <= 0 || strlen(args[0]) <= 0) {
-            dir = HOME;
-        } else {
-            dir = args[0];
-        }
-        return chdir(dir);
-    } else if (cmd_exists(cmd)) {
-        if (streq(cmd, "init")) {
+    }
+    else if (streq(cmd, "source")) return source(args[0]);
+    else if (streq(cmd, "pwd"))  return pwd();
+    else if (streq(cmd, "cd")) return cd(args[0]);
+    else if (strlen(cmd) <= 0) return 0;
+    else if (cmd_exists(cmd)) {
+        if (streq(cmd, "init") || streq(cmd, "login")) {
             printf("Error: invalid cmd\n");
-            return -1;
-        } else if (streq(cmd, "login")) {
-            printf("You must logout first\n");
             return -1;
         } else {
             if (streq(cmd, "sh")) {
@@ -86,8 +77,6 @@ int sh(const char* line)
             }
             return run_cmd(cmd, args, nArgs);
         }
-    } else if (strlen(cmd) <= 0) {
-        return 0;
     } else {
         printf("unknown cmd: %s\n", cmd);
         return -1;
@@ -98,7 +87,7 @@ int source(const char* filename)
 {
     int f = open(filename, O_RDONLY);
     if (f < 0) {
-        printf("source error: could not open %s\n", filename);
+        printf("error: could not open %s\n", filename);
         return 1;
     }
 
@@ -119,6 +108,14 @@ int source(const char* filename)
         }
     }
     return r;
+}
+
+int cd(const char* dir)
+{
+    if (!dir || strlen(dir) <= 0) {
+        dir = HOME;
+    }
+    return chdir(dir);
 }
 
 int run_cmd(const char* cmd, const char** args, int nArgs)

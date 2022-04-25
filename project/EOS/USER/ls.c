@@ -53,8 +53,8 @@ void ls_file(const char* filename)
     if (mode & S_IXOTH) putc('x'); else putc('-');
 
     printf("  %u", st.st_nlink);
-    printf("  %u", st.st_uid);
-    printf("  %d", st.st_size);
+    printf(" %u", st.st_uid);
+    printf(" %d ", st.st_size);
 
     const char* basename;
     char path_components[16][TOKEN_LEN];

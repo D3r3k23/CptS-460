@@ -3,7 +3,7 @@
 int main(int argc, char* argv[])
 {
     int total = 0;
-    if (argc >= 2) { // Cat file
+    if (argc >= 2) { // cat file
         const char* filename = argv[1];
 
         STAT st;
@@ -31,24 +31,23 @@ int main(int argc, char* argv[])
                 close(fd);
             }
         }
-    } else { // Cat stdin
+    } else { // cat stdin
         char line[1024];
         int nLine = 0;
         char s[1];
         int n;
         while (n = read(0, s, 1)) {
             total += n;
-
-            if (*s == '\r' || *s == '\n') {
+            if (*s == CTRL_C) {
+                printf("\r%s\n\n", line);
+                return 0;
+            } else if (*s == '\r' || *s == '\n') {
                 printf("\r%s\n", line);
                 bzero(line, 1024);
             } else {
                 write(1, s, 1);
-                // if (*s == 3) {
-                //     return 0;
-                // }
                 if (nLine >= 1024) {
-                    printf("%s", line);
+                    printf("\r%s", line);
                     bzero(line, 1024);
                 } else {
                     strcat(line, s);
@@ -57,6 +56,6 @@ int main(int argc, char* argv[])
             }
         }
     }
-    printf("\n");
+    // printf("\n");
     return !!total;
 }
