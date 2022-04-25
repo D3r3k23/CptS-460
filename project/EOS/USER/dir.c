@@ -9,7 +9,7 @@ DIR* read_dir(const char* dirname, char buf[DIR_BLKSIZE], DIR* dir)
             return NULL;
         } else {
             int fd = open(dirname, O_RDONLY);
-            if (fd == NULL) {
+            if (fd == -1) {
                 return NULL;
             } else {
                 read(fd, buf, DIR_BLKSIZE);
