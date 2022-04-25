@@ -1,6 +1,7 @@
 #include "ucode.c"
 
 static const int NUM_COLS = 80;
+static const int NUM_ROWS = 20;
 
 int main(int argc, char* argv[])
 {
@@ -16,17 +17,30 @@ int main(int argc, char* argv[])
         char line[512];
         bzero(line, 512);
         char* lp = line;
+        int nLines = 0;
+        int nLinesRequested = 0;
         int n;
         while (n = read(fd, buf, 1024)) {
             for (int i = 0; i < n; i++) {
                 char c = buf[i];
                 if (c == '\r' || c == '\n') {
-                    switch (getc())
-                    {
-                        case 'q': return 0;
-                        default:
-                            printf("%s\n", line);
+                    if (nLinesRequested == 0) {
+                        switch (getc())
+                        {
+                            case 'q':
+                                return 0;
+                            case '\r': case'\n':
+                                nLinesRequested++;
+                                break;
+                            case ' ':
+                                nLinesRequested += NUM_ROWS;
+                                break;
+                        }
                     }
+                    printf("%s\n", line);
+                    nLines++;
+                    nLinesRequested--;
+
                     bzero(line, 512);
                     lp = line;
                 } else {
@@ -36,7 +50,29 @@ int main(int argc, char* argv[])
         }
         close(fd);
     } else { // more stdin
-        printf("Still need to add more stdin\n");
+        char line[1024];
+        int nLine = 0;
+        char s[1];
+        int n;
+        while (n = read(0, s, 1)) {
+            total += n;
+            if (*s == CTRL_C) {
+                printf("\r%s\n\n", line);
+                return 0;
+            } else if (*s == '\r' || *s == '\n') {
+                printf("\r%s\n", line);
+                bzero(line, 1024);
+            } else {
+                write(1, s, 1);
+                if (nLine >= 1024) {
+                    printf("\r%s", line);
+                    bzero(line, 1024);
+                } else {
+                    strcat(line, s);
+                    nLine++;
+                }
+            }
+        }
     }
     return total;
 }
