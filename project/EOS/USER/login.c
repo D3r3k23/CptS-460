@@ -1,14 +1,17 @@
 #include "ucode.c"
+#include "str_append.c"
 
-static const char* PASSWORD_FILE = "/etc/passwd";
+#define TOKEN_LEN 128
+#include "tokenize.c"
 
-void login(const char* username, const char* password);
-char* get_password_field(char* passwd_line, int index, char* buf);
+static const char* PASSWD_FILE = "/etc/passwd";
+
+int login(const char* username, const char* password);
 
 int main(int argc, char* argv[])
 {
     if (argc < 2) {
-        printf("login ERROR: no device provided\n");
+        printf("login ERROR: no serial device provided\n");
         return 2;
     }
     const char* dev = argv[1];
@@ -40,71 +43,64 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void login(const char* username, const char* password)
+int login(const char* username, const char* password)
 {
-    int passwd = open(PASSWORD_FILE, O_RDONLY);
+    int passwd = open(PASSWD_FILE, O_RDONLY);
+    if (passwd < 0) {
+        printf("Error opening %s\n", PASSWD_FILE);
+        return -1;
+    }
 
     char buf[2048];
     int n = read(passwd, buf, 2048);
 
     close(passwd);
 
-    char line[256];
-    char* lp = line;
-    for (int i = 0; i < n; i++) {
-        if (buf[i] != '\n') {
-            *lp++ = buf[i];
-        } else {
-            *lp = '\0';
-            char f_username[32]; get_password_field(line, 0, f_username);
-            if (streq(f_username, username)) {
-                char f_password[32]; get_password_field(line, 1, f_password);
-                if (streq(f_password, password)) {
-                    printf("%s logging in...\n", username);
-                    char f_gid[32];    get_password_field(line, 2, f_gid);
-                    char f_uid[32];     get_password_field(line, 3, f_uid);
-                    char f_fullname[32]; get_password_field(line, 4, f_fullname);
-                    char f_homedir[32];   get_password_field(line, 5, f_homedir);
-                    char f_program[32];    get_password_field(line, 6, f_program);
+    char lines[64][TOKEN_LEN];
+    int nLines = tokenize(buf, '\n', lines, 64);
 
-                    int gid = atoi(f_gid);
-                    int uid = atoi(f_uid);
-                    chuid(uid, gid);
-
-                    printf("Welcome home, %s!\n", f_fullname);
-                    chdir(f_homedir);
-
-                    char cmd[64];
-                    strcpy(cmd, f_program);
-                    strcat(cmd, " ");
-                    strcat(cmd, f_username);
-                    exec(cmd);
-                } else {
-                    printf("Incorrect password\n");
-                    return;
-                }
+    for (int i = 0; i < nLines; i++) {
+        const char* line = lines[i];
+        if (strlen(line) > 0) {
+            char fields[7][TOKEN_LEN];
+            int nFields = tokenize(line, ':', fields, 7);
+            if (nFields != 7) {
+                printf("Error reading %s\n", PASSWD_FILE);
+                return -1;
             } else {
-                memset(line, 0, 128);
-                lp = line;
+                const char* f_username = fields[0];
+                if (streq(f_username, username)) {
+                    const char* f_password = fields[1];
+                    if (!streq(f_password, password)) {
+                        printf("Incorrect password\n");
+                        return -1;
+                    } else {
+                        printf("%s logging in...\n", username);
+                        const char* f_gid =    fields[2];
+                        const char* f_uid =     fields[3];
+                        const char* f_fullname = fields[4];
+                        const char* f_homedir =   fields[5];
+                        const char* f_program =    fields[6];
+
+                        int gid = atoi(f_gid);
+                        int uid = atoi(f_uid);
+                        chuid(uid, gid);
+
+                        printf("Welcome home, %s!\n", f_fullname);
+                        chdir(f_homedir);
+
+                        char cmd[64];
+                        strcpy(cmd, f_program);
+                        str_append(cmd, f_username);
+                        str_append(cmd, f_homedir);
+                        exec(cmd);
+
+                        return 0;
+                    }
+                }
             }
         }
     }
-    printf("Username: %s not found\n", username);
-}
-
-// username:password:gid:uid:fullname:homedir:program
-char* get_password_field(char* passwd_line, int index, char* buf)
-{
-    // Find first char in passwd_line
-    char* lp = passwd_line;
-    for (int i = 0; i < index; i++) {
-        while (*lp++ != ':');
-    }
-
-    // Copy field to buf
-    char* fp = buf;
-    while (*lp != ':' && *lp != '\n') {
-        *fp++ = *lp++;
-    }
-    *fp = '\0';
+    printf("Username %s not found\n", username);
+    return -1;
 }

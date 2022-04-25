@@ -1,4 +1,5 @@
 #include "ucode.c"
+#include "str_append.c"
 
 int login(const char* dev); // Returns pid
 
@@ -38,9 +39,8 @@ int login(const char* dev)
         return pid;
     }
     else { // Child
-        char cmd[32];
-        strcpy(cmd, "login ");
-        strcat(cmd, dev);
+        char cmd[32] = "login";
+        str_append(cmd, dev);
         exec(cmd);
     }
 }

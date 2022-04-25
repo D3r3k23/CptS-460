@@ -21,9 +21,7 @@ rm -f sdimage
 cp ../original_sdimage sdimage
 (cd USER; ./mk.sh)
 
-echo "|===============================|"
-echo "|             clean             |"
-echo "|===============================|"
+echo "|====== clean ======|"
 for DIR in driver fs
 do
     echo "clean $DIR"

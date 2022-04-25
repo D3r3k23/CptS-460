@@ -23,6 +23,10 @@ typedef unsigned int   u32;
 #include "crt0.c"
 #include "string.c"
 
+#ifndef NULL
+#define NULL 0
+#endif
+
 int pid;
 char line[64], pathname[32], i2[32], i3[32];
 char *name[16], components[64];
@@ -37,24 +41,24 @@ int getc()
    int c, n;
    n = read(0, &c, 1);
 
-   /********************************************************************* 
-   getc from KBD will NOT get 0 byte but reading file (after redirect 0 
+   /*********************************************************************
+   getc from KBD will NOT get 0 byte but reading file (after redirect 0
    to file) may get 0 byte ==> MUST return 2-byte -1 to differentiate.
    **********************************************************************/
 
-   if (n==0 || c==4 || c==0 ) return EOF;  
-                                
+   if (n==0 || c==4 || c==0 ) return EOF;
+
    return (c&0x7F);
 }
 
-// getline() does NOT show the input chars AND no cooking: 
+// getline() does NOT show the input chars AND no cooking:
 // for reditected inputs from a file which may contain '\b' chars
 
 int getline(char *s)
 {
-  int c;  
+  int c;
   char *cp = s;
-  
+
   c = getc();
 
   while ((c != EOF) && (c != '\r') && (c != '\n')){
@@ -64,8 +68,8 @@ int getline(char *s)
   if (c==EOF) return 0;
 
   *cp++ = c;         // a string with last char=\n or \r
-  *cp = 0;    
-  //printf("getline: %s", s); 
+  *cp = 0;
+  //printf("getline: %s", s);
   return strlen(s);  // at least 1 because last char=\r or \n
 }
 
@@ -76,7 +80,7 @@ int gets(char *s)
 {
   int c;
   char *cp, *cq, temp[128];
-  
+
   cp = temp;    // get chars into temp[] first
 
   c = getc();
@@ -92,18 +96,18 @@ int gets(char *s)
   putc('\n'); putc('\r');
 
   if (c==EOF) return 0;
-  
-  *cp = 0;   
+
+  *cp = 0;
 
   // printf("temp=%s\n", temp);
 
   // cook line in temp[] into s
-  cp = temp; cq = s; 
+  cp = temp; cq = s;
 
   while (*cp){
     if (*cp == '\b'){
       if (cq > s)
-	  cq--; 
+	  cq--;
       cp++;
       continue;
     }
@@ -261,7 +265,7 @@ int getcwd(char *cwdname)
 }
 
 int stat(char *filename, struct stat *sPtr)
-{   
+{
    return syscall(29, filename, sPtr);
 }
 
@@ -483,26 +487,26 @@ int pwd()
 
 // nk = eatpat(line, name);
 
-int eatpath(char *line, char *name[ ])  
+int eatpath(char *line, char *name[ ])
 {
   int i, n; char *cp;
 
-  n = 0; 
+  n = 0;
   for (i=0; i<16; i++)
       name[i]=0;
 
   cp = line;
   while (*cp != 0){
        while (*cp == ' ')
-              *cp++ = 0;       
+              *cp++ = 0;
        if (*cp != 0)
-           name[n++] = cp; 
+           name[n++] = cp;
        while (*cp != ' ' && *cp != 0)
-	       cp++; 
-       if (*cp != 0)       
-	   *cp = 0;        
+	       cp++;
+       if (*cp != 0)
+	   *cp = 0;
        else
-           break; 
+           break;
        cp++;
   }
 
@@ -522,7 +526,7 @@ int strcasecmp(char *s1, char *s2)
   char *cp;
 
   char t1[64], t2[64];
-  strcpy(t1, s1); 
+  strcpy(t1, s1);
   strcpy(t2,s2);
 
   //printf("t1=%s  t2=%s  ", t1, t2);
