@@ -1,5 +1,4 @@
 #include "ucode.c"
-#include "str_append.c"
 
 #define TOKEN_LEN 128
 #include "tokenize.c"
@@ -91,8 +90,8 @@ int login(const char* username, const char* password)
 
                         char cmd[64];
                         strcpy(cmd, f_program);
-                        str_append(cmd, f_username);
-                        str_append(cmd, f_homedir);
+                        strjoin(cmd, " ", f_username);
+                        strjoin(cmd, " ", f_homedir);
                         exec(cmd);
 
                         return 0;

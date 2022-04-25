@@ -117,7 +117,7 @@ PROC *kfork(char *filename)
   enqueue(&readyQueue, p);
 
   // kprintf("proc %d kforked a child %d\n", running->pid, p->pid);
-  printQ(readyQueue);
+  // printQ(readyQueue);
 
   return p;
 }
@@ -229,7 +229,7 @@ int fork()
   enqueue(&readyQueue, p);
 
   // kprintf("FORK: proc %d forked a child %d\n", running->pid, p->pid);
-  printQ(readyQueue);
+  // printQ(readyQueue);
 
   return p->pid;
 }

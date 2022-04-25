@@ -58,6 +58,12 @@ int streq(const char* s1, const char* s2)
   return strcmp(s1, s2) == 0;
 }
 
+void strjoin(char* s1, const char* join, const char* s2)
+{
+  strcat(s1, join);
+  strcat(s1, s2);
+}
+
 char *strcpy(char *dest, const char *src) {
 	char *p = dest;
 	while ( (*dest++ = *src++))
@@ -148,4 +154,3 @@ int atoi(char *s)
   }
   return v;
 }
-

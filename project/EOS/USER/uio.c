@@ -71,6 +71,24 @@ typedef struct stat {
 #define S_ISREG(m) ((m >> 12) == 010)
 #define S_ISLNK(m) ((m >> 12) == 012)
 
+// Owner
+#define S_IRWXU 0700 // R/W/X
+#define S_IRUSR 0400 // R
+#define S_IWUSR 0200 // W
+#define S_IXUSR 0100 // X
+
+// Group
+#define S_IRWXG 0070 // R/W/X
+#define S_IRGRP 0040 // R
+#define S_IWGRP 0020 // W
+#define S_IXGRP 0010 // X
+
+// Others
+#define S_IRWXO 0007 // R/W/X
+#define S_IROTH 0004 // R
+#define S_IWOTH 0002 // W
+#define S_IXOTH 0001 // X
+
 #define EOF  -1
 
 #define exit mexit

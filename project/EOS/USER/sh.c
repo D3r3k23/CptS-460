@@ -1,5 +1,5 @@
 #include "ucode.c"
-#include "str_append.c"
+#include "dir.c"
 
 #define TOKEN_LEN 128
 #include "tokenize.c"
@@ -9,6 +9,9 @@ int source(const char* filename);
 
 int run_cmd(const char* cmd, const char** args, int nArgs);
 int cmd_exists(const char* cmd);
+int is_executable(const char* filename);
+
+const char* PATH = "/bin";
 
 const char* user = "";
 const char* HOME = "";
@@ -80,7 +83,7 @@ int sh(const char* line)
             return run_cmd(cmd, args, nArgs);
         }
     } else {
-        printf("Unknown cmd: %s\n", cmd);
+        printf("unknown cmd: %s\n", cmd);
         return -1;
     }
 }
@@ -117,7 +120,7 @@ int run_cmd(const char* cmd, const char** args, int nArgs)
     char cmd_line[128];
     strcpy(cmd_line, cmd);
     for (int i = 0; i < nArgs; i++) {
-        str_append(cmd_line, args[i]);
+        strjoin(cmd_line, " ", args[i]);
     }
 
     int pid = fork();
@@ -135,5 +138,45 @@ int run_cmd(const char* cmd, const char** args, int nArgs)
 
 int cmd_exists(const char* cmd)
 {
-    return 1;
+    char buf[DIR_BLKSIZE];
+    for (DIR* dir = read_dir(PATH, buf, NULL); dir; dir = read_dir(NULL, buf, dir)) {
+        char name[32];
+        get_dir_entry_name(dir, name);
+
+        if (streq(cmd, name)) {
+            char path[64];
+            strcpy(path, PATH);
+            strjoin(path, "/", cmd);
+
+            return is_executable(path);
+        }
+    }
+    return 0;
+}
+
+int is_executable(const char* filename)
+{
+    STAT st;
+    int r = stat(filename, &st);
+    if (r < 0) {
+        return 0;
+    } else {
+        int uid = getuid();
+        if (uid == 0) {
+            return 1;
+        } else {
+            if (st.st_mode & S_IXOTH) {
+                return 1;
+            } else {
+                int owner = st.st_uid == uid;
+                if (owner) {
+                    if (st.st_mode & S_IXUSR) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
 }

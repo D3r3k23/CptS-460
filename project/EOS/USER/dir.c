@@ -4,14 +4,12 @@ DIR* read_dir(const char* dirname, char buf[DIR_BLKSIZE], DIR* dir)
 {
     if (!dir) {
         STAT st;
-        stat(dirname, &st);
-        if (S_ISDIR(st.st_mode)) {
-            printf("Error: %s is not a dir\n", dirname);
+        int r = stat(dirname, &st);
+        if (r < 0) {
             return NULL;
         } else {
             int fd = open(dirname, O_RDONLY);
             if (fd == NULL) {
-                printf("Error: Could not open %s\n", dirname);
                 return NULL;
             } else {
                 read(fd, buf, DIR_BLKSIZE);
@@ -27,4 +25,11 @@ DIR* read_dir(const char* dirname, char buf[DIR_BLKSIZE], DIR* dir)
             return NULL;
         }
     }
+}
+
+void get_dir_entry_name(DIR* dir, char* name)
+{
+    int len = dir->name_len;
+    strncpy(name, dir->name, len);
+    return name;
 }
