@@ -39,8 +39,6 @@ int main(int argc, char* argv[])
             login(username, password);
         }
     }
-
-    return 0;
 }
 
 int login(const char* username, const char* password)
