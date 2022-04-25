@@ -8,7 +8,9 @@ int sh(const char* line);
 int source(const char* filename);
 int cd(const char* dir);
 
+int sh_line(const char* line);
 int run_cmd(const char* cmd, const char** args, int nArgs);
+
 int cmd_exists(const char* cmd);
 int is_executable(const char* filename);
 
@@ -37,49 +39,30 @@ int main(int argc, char* argv[])
 
         char line[128];
         gets(line);
-
-        sh(line);
+        if (strlen(line) > 0) {
+            sh(line);
+        }
     }
 }
 
 int sh(const char* line)
 {
-    char tokens[16][TOKEN_LEN];
-    int nTokens = tokenize(line, ' ', tokens, 16);
+    char tokens[3][TOKEN_LEN];
+    int nTokens = tokenize(line, ' ', tokens, 3);
 
     const char* cmd = tokens[0];
-    const char* args[16];
-    int nArgs = nTokens - 1;
-    for (int i = 0; i < 16; i++) {
-        if (i < nArgs) {
-            args[i] = tokens[i + 1];
-        } else {
-            args[i] = NULL;
-        }
-    }
+    const char* arg = (nTokens >= 2) ? argv[1] : NULL;
+
     if (streq(cmd, "logout")) {
         printf("Goodbye\n");
         exit(0);
-    }
-    else if (streq(cmd, "source")) return source(args[0]);
-    else if (streq(cmd, "pwd"))  return pwd();
-    else if (streq(cmd, "cd")) return cd(args[0]);
-    else if (strlen(cmd) <= 0) return 0;
-    else if (cmd_exists(cmd)) {
-        if (streq(cmd, "init") || streq(cmd, "login")) {
-            printf("Error: invalid cmd\n");
-            return -1;
-        } else {
-            if (streq(cmd, "sh")) {
-                args[0] = user;
-                args[1] = HOME;
-                nArgs = 2;
-            }
-            return run_cmd(cmd, args, nArgs);
-        }
+    } else if (streq(cmd, "sh")) {
+        const char* args[2] = { name, HOME };
+        return run_cmd("sh", args, 2);
+    } else if (streq(cmd, "source")) {
+        return source(arg);
     } else {
-        printf("unknown cmd: %s\n", cmd);
-        return -1;
+        return sh_line(line);
     }
 }
 
@@ -116,6 +99,38 @@ int cd(const char* dir)
         dir = HOME;
     }
     return chdir(dir);
+}
+
+int sh_line(const char* line) // Recursive - for pipes/IO redirection
+{
+    char tokens[16][TOKEN_LEN];
+    int nTokens = tokenize(line, ' ', tokens, 16);
+
+    const char* cmd = tokens[0];
+    const char* args[16];
+    int nArgs = nTokens - 1;
+    for (int i = 0; i < 16; i++) {
+        if (i < nArgs) {
+            args[i] = tokens[i + 1];
+        } else {
+            args[i] = NULL;
+        }
+    }
+    if (streq(cmd, "pwd")) {
+        return pwd();
+    } else if (streq(cmd, "cd")) {
+        return cd(args[0]);
+    } else if (cmd_exists(cmd)) {
+        if (streq(cmd, "init") || streq(cmd, "login") || streq(cmd, "sh")) {
+            printf("Error: invalid cmd\n");
+            return -1;
+        } else {
+            return run_cmd(cmd, args, nArgs);
+        }
+    } else {
+        printf("unknown cmd: %s\n", cmd);
+        return -1;
+    }
 }
 
 int run_cmd(const char* cmd, const char** args, int nArgs)

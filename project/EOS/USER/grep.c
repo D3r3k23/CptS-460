@@ -40,6 +40,8 @@ int main(int argc, char* argv[])
         }
         close(fd);
         return matches;
+    } else { // grep stdin
+        printf("Still need to add grep stdin\n");
     }
 }
 
