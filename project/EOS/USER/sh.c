@@ -11,6 +11,8 @@ int run_cmd(const char* cmd, const char** args, int nArgs);
 int cmd_exists(const char* cmd);
 int is_executable(const char* filename);
 
+void sigint_handler(int sig);
+
 const char* PATH = "/bin";
 
 const char* user = "";
@@ -24,6 +26,8 @@ int main(int argc, char* argv[])
     if (strlen(HOME) > 0) {
         chdir(HOME);
     }
+
+    signal(SIGINT, sigint_handler); // Ctrl+C
 
     while (1) {
         char cwd[64];
@@ -67,7 +71,7 @@ int sh(const char* line)
             dir = args[0];
         }
         return chdir(dir);
-    } else if (strlen(cmd) > 0 && cmd_exists(cmd)) {
+    } else if (cmd_exists(cmd)) {
         if (streq(cmd, "init")) {
             printf("Error: invalid cmd\n");
             return -1;
@@ -82,6 +86,8 @@ int sh(const char* line)
             }
             return run_cmd(cmd, args, nArgs);
         }
+    } else if (strlen(cmd) <= 0) {
+        return 0;
     } else {
         printf("unknown cmd: %s\n", cmd);
         return -1;
@@ -131,7 +137,7 @@ int run_cmd(const char* cmd, const char** args, int nArgs)
     } else {
         exec(cmd_line);
 
-        // exec failed
+        // exec failed //
         return -1;
     }
 }
@@ -168,15 +174,21 @@ int is_executable(const char* filename)
             if (st.st_mode & S_IXOTH) {
                 return 1;
             } else {
-                int owner = st.st_uid == uid;
-                if (owner) {
-                    if (st.st_mode & S_IXUSR) {
-                        return 1;
-                    } else {
-                        return 0;
-                    }
+                int owner = (st.st_uid == uid);
+                if (owner && (st.st_mode & S_IXUSR)) {
+                    return 1;
+                } else {
+                    return 0;
                 }
             }
         }
+    }
+}
+
+void sigint_handler(int sig)
+{
+    if (1) {
+        signal(SIGINT, sigint_handler);
+        printf("^C\n");
     }
 }

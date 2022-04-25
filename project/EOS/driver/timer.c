@@ -51,8 +51,8 @@ extern int row, col;
 int kpchar(char, int, int);
 int unkpchar(char, int, int);
 int srow, scol;
-char clock[16]; 
-char *blanks = "  :  :  ";        
+char clock[16];
+char *blanks = "  :  :  ";
 int hh, mm, ss;
 u32 tick=0;
 int oldcolor;
@@ -75,7 +75,7 @@ void timer0_handler() {
     TNODE *tqq;
     oldcolor = color;
     color = GREEN;
-    
+
     ris = tp[0]->RIS;
     mis = tp[0]->MIS;
     value = tp[0]->VALUE;
@@ -99,7 +99,7 @@ void timer0_handler() {
       for (i=0; i<8; i++){
           unkpchar(clock[i], 0, 70+i);
       }
-  
+
       clock[7]='0'+(ss%10); clock[6]='0'+(ss/10);
       clock[4]='0'+(mm%10); clock[3]='0'+(mm/10);
       clock[1]='0'+(hh%10); clock[0]='0'+(hh/10);
@@ -127,7 +127,7 @@ void timer0_handler() {
              printf("wakeup %d\n", p->pid);
            }
 	 }
-       }  
+       }
 
       // at each second process timerQ
       /* processing timer queue elements */
@@ -140,7 +140,7 @@ void timer0_handler() {
 	       printf("send signal 14 to %d ", tqq->who->pid);
                  tqq->who->res->signal |= (1 << 14);
 		 // printf("signal=%d\n", tqq->who->res->signal);
-			       
+
                  tq = tqq->next;
                  put_tnode(tqq);
                  tqq = tq;
@@ -152,7 +152,7 @@ void timer0_handler() {
           }
        }
     }
-    // at each tick  
+    // at each tick
     if (running->pid)    // excluding P0
        running->time--;
 
@@ -171,21 +171,21 @@ void timer0_handler() {
     printf("%d timer switch process to %d\n", running->pid, readyQueue->pid);
     swflag = 1;
   }
-    
+
   return;
 }
 
 void timer_init()
 {
   int i;
-  kprintf("timer_init() ");
+  kprintf("timer init\n");
 
   // set timer base address
-  tp[0] = (TIMER *)(0x101E2000); 
+  tp[0] = (TIMER *)(0x101E2000);
   tp[1] = (TIMER *)(0x101E2020);
-  tp[2] = (TIMER *)(0x101E3000); 
+  tp[2] = (TIMER *)(0x101E3000);
   tp[3] = (TIMER *)(0x101E3020);
- 
+
  // set control counter regs to defaults
   for (i=0; i<4; i++){
     tp[i]->LOAD = 0x0;   // reset
@@ -203,20 +203,20 @@ void timer_init()
   strcpy(clock, "00:00:00");
   hh = mm = ss = 0;
 
-  ft = &tnode[0]; 
+  ft = &tnode[0];
   for (i=0; i<NPROC; i++)
     tnode[i].next = &tnode[i+1];
   tnode[NPROC-1].next=0;
   tq = 0;
 
-  
+
 }
 
 void timer_start(int n) // timer_start(0), 1, etc.
 {
   TIMER *tpr;
-  kprintf("timer_start\n");
-  tpr = tp[n]; 
+  kprintf("timer start\n");
+  tpr = tp[n];
   tpr->CONTROL |= 0x80;  // set enable bit 7
 }
 int timer_clearInterrupt(int n) // timer_start(0), 1, etc.
@@ -277,14 +277,14 @@ kitimer(int time)
     }
     else{
           q = p = tq;
-          while (p){ 
-              if (time - p->time < 0) 
-                  break;  
+          while (p){
+              if (time - p->time < 0)
+                  break;
               time -= p->time;
               q = p;
               p = p->next;
           }
-          if (p){ 
+          if (p){
               p->time -= time;
           }
           t->time = time;

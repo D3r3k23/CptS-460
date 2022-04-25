@@ -21,10 +21,10 @@ extern u32 irq_stack_top;
 // deliver signal to pid: what if pid is SLEEP or BLOCK?
 // SLEEP ==> wakeup  BLOCK==> must V the semaphore
 
-/*********************** KCW: 4-20-06 ************************************  
+/*********************** KCW: 4-20-06 ************************************
  kill delivers a signal to a process. If the process is BLOCK or SLEEP,
  we should V()/wakeup it.
- If the process is BLOCKed on a sempahore, we must know which semaphore it is 
+ If the process is BLOCKed on a sempahore, we must know which semaphore it is
  blocked on. So, if a proc is blocked on a semaphore, we let proc.sem -> the
  blocking semaphore. Then we can unblock the process from the semaphore queue
  by the wV(running) operation.
@@ -42,18 +42,18 @@ int kkill(int sig, int pid)
   int i, oldsig;
   UART *up;
   KBD *kp;
-  
+
   // NOTE: in PMTX and SMP, proc[i] has pid=i+1, so dec pid by 1
   if (pid < 1 || pid > NPROC) return -1;
   if (sig < 1 || sig >= NSIG) return -1;
 
   p = &proc[pid];
-  if (p->status==FREE || p->status == ZOMBIE) 
+  if (p->status==FREE || p->status == ZOMBIE)
      return -1;
 
   /**** uncomment this to allow only superuser to kill **************
   if (running->res->uid != 0){
-     if (running->res->uid != p->res->uid) 
+     if (running->res->uid != p->res->uid)
         return -1
   }
   *******************************************************************/
@@ -70,22 +70,22 @@ int kkill(int sig, int pid)
   if (p->status==BLOCK){
     // this task is BLOCKed on p->sem semaphore; it may NOT be the first in
     // that semQ, so must do a different V
-    // unblock p only if it is waiting for terminal inputs 
+    // unblock p only if it is waiting for terminal inputs
     // printf("sem=%x kbData=%x\n", p->sem, &kbData);
     /*************************** KCW ***************************************
       although the proc is unblocked, its resuming point is still in getc() or
       sgetc(), which would advance the input buffer tail pointer by 1, causing
-      the next proc to get wrong keys. There are 2 options: write a dummy char 
+      the next proc to get wrong keys. There are 2 options: write a dummy char
       to the input buffer OR decrement tail pointer by 1.
     **********************************************************************/
-  
+
     //printf("sem=%x inch=%x ", p->sem, &uart[0].inchar);
     if (p->sem==&uart[0].inchar || p->sem==&uart[1].inchar){
       //printf("%d was blocked on semaphore\n", p->pid);
       // let dyning proc read a dummy char from input buffer
       if (p->sem == &uart[0].inchar){
          up = &uart[0];
-         up->inhead++; 
+         up->inhead++;
       }
       if (p->sem == &uart[1].inchar){
 	 up = &uart[1];
@@ -137,13 +137,13 @@ int cksig()
   return 0;
 }
 extern setulr();
-// when a process is about return to Umode, handle any outstanding signal 
+// when a process is about return to Umode, handle any outstanding signal
 int kpsig()
 {
   int  i, n, upc, oldPC, newPC, w;
   int *cp;
   int *sp, cpsr, mode;
-  
+
   n = cksig();
   if (n==0) return;
   //if (running->pid)
@@ -154,18 +154,18 @@ int kpsig()
     return;
   }
   if (running->res->sig[n] == 0){
-     printf("proc %d dying by signal# %d ", running->pid, n);
+     // printf("proc %d dying by signal# %d ", running->pid, n);
      /**************
      if in IRQ mode with a signal: can't exit in IRQ mode because tswitch can
      only be in SVC mode
      ****************/
      mode = get_cpsr() & 0x1F;
      if (mode == 0x13){ // SVC mode call kexit()
-       printf("in SVC mode\n");
+       // printf("in SVC mode\n");
          kexit(n<<8);
      }
      if (mode == 0x12){ // IRQ mode
-       printf("in IRQ mode\n");
+       // printf("in IRQ mode\n");
        irq_exit(n<<8);
      }
   }
@@ -174,24 +174,24 @@ int kpsig()
   running->res->sig[n] = 0;           // reset catcher to default
 
   /***** trap stack: timer: in IRQ mode data in abort mode**
-            |ulr|r12|r11 r10 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0| 
+            |ulr|r12|r11 r10 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0|
              1    2  3    4  5  6  7  8  9  10 11 12 13 14
        replace ulr with catch address at newPC
        set r0 to signal #
-       set User mode lr to ulr 
+       set User mode lr to ulr
 SVC stack
-   *******************************************/  
+   *******************************************/
    // if in SVC mode => modify kstack
 
   cpsr = get_cpsr();
-  printf("cpsr=%x\n", cpsr & 0xFF);
+  // printf("cpsr=%x\n", cpsr & 0xFF);
   if ((cpsr & 0x1F)==0x13){ // SVC mode
      oldPC = running->kstack[SSIZE-1];
      running->kstack[SSIZE-1] = newPC;
      running->upc = newPC;
      running->kstack[SSIZE-14] = n;  // saved r0=n
      setulr(oldPC);
-     printf("SVC: oldPC=%x  newPC=%x\n", oldPC, newPC);
+     // printf("SVC: oldPC=%x  newPC=%x\n", oldPC, newPC);
   }
 
   if ((cpsr & 0x1F)==0x12){ // IRQ mode => change IRQ stack
@@ -200,17 +200,17 @@ SVC stack
     *(sp-1) = newPC;
     *(sp-14) = n;
     setulr(oldPC);
-    printf("IRQ: oldPC=%x  newPC=%x\n", oldPC, newPC);
-  }	
+    // printf("IRQ: oldPC=%x  newPC=%x\n", oldPC, newPC);
+  }
    // if in IRQ mode => must mdify IRQ stack at irq_stack_top
 
    return 0;
 }
     /* ====================== 32-bit mode ============================
  HI                         kstack                                   LOW
-                         
+
       |uss|usp|uflag|ucs|upc|ax|bx|cx|dx|bp|si|di|uds|ues|ufs|ugs|
-            |            ***                                                    
+            |            ***
             V                                                        LOW
     ------------------------------------------------------------
        uframes|sig#|oldPC|
@@ -220,7 +220,7 @@ SVC stack
 //********************* exception kstack layout ****************************
  |oss|osp|eflag|cs|eip|0/err#|nr|ax|cx|dx|bx|esp|bp|si|di|ds|es|fs|gs|ss|
  |<----- by exception ------>|  |<----- by pushal ------>|
-   1   2   3     4  5    6     7  8  9 10 11  12 13 14 15 16 17 18 19 20 
+   1   2   3     4  5    6     7  8  9 10 11  12 13 14 15 16 17 18 19 20
 
      1. replace upc in kstack by newPC --> ucatcher()
      2. create 2 slots in ustack as oldPC,sig#
@@ -233,7 +233,7 @@ SVC stack
 
      *(u32 *)(running->kstack[SSIZE-2] - 4) = n;
      *(u32 *)(running->kstack[SSIZE-2] - 8) = oldPC;
-     running->kstack[SSIZE-2] -= 8;  
+     running->kstack[SSIZE-2] -= 8;
      printf("newPC=%x oldPC=%x\n", newPC, oldPC);
      */
      /****** for debugging during development ************

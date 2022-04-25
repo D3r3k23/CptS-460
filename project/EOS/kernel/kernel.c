@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define  BLOCK  3
 #define  ZOMBIE 4
 #define  printf  kprintf
- 
+
 typedef struct proc{
   struct proc *next;
   int    *ksp;
@@ -75,19 +75,19 @@ char line[8];
 ***********************************************************************/
 int init()
 {
-  int i, j; 
+  int i, j;
   PROC *p; char *cp;
   int *Mtable, *mtable;
   int paddr;
 
-  kprintf("kernel_init()\n");
+  kprintf("kernel init\n");
   for (i=0; i<NPROC; i++){
     p = &proc[i];
     p->pid = i;
     p->status = FREE;
     p->priority = 0;
     p->ppid = 0;
- 
+
     p->res = &pres[i];   // res point to pres[i]
     // p->usp = &ustack[i][1024]; // ustack is at the high end of Uimage
     kstrcpy(p->res->name, pname[i]);
@@ -113,13 +113,13 @@ int init()
 
   readyQueue = 0;
   sleepList = 0;
- 
+
   // creat P0 as running;
   p = running = getproc();
   p->status = READY;
   p->inkmode = 1;
 
-  p->res->uid = p->res->gid = 0;    
+  p->res->uid = p->res->gid = 0;
   p->res->signal = 0;
   p->res->name[0] = 0;
   p->time = 10000;              // arbitray since P0's p time never decreases
@@ -148,8 +148,8 @@ int init()
     for (j=2049; j<4096; j++){ // zero out high 2048 entries
       mtable[j] = 0;
     }
-    //proc[0] does not need a mtable, proc[i]'s pagetable: VA=0x800000 + 
-    mtable[2048]=(0x800000 + (i-1)*0x100000)|0xC12; // entry 2048 OR in 0xC12  
+    //proc[0] does not need a mtable, proc[i]'s pagetable: VA=0x800000 +
+    mtable[2048]=(0x800000 + (i-1)*0x100000)|0xC12; // entry 2048 OR in 0xC12
     mtable += 4096;
   }
 

@@ -76,6 +76,6 @@ fs_init()
   for (i=0; i<NOFT; i++)
       oft[i].refCount = 0;
 
-  printf("mounting root : ");
+  printf("mounting root: ");
   mountroot();
 }

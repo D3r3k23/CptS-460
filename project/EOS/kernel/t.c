@@ -44,13 +44,13 @@ int mkptable()
 
   for (i=0; i<4096; i++)
     pgdir[i] = 0;
-  
+
   for (i=0; i<258; i++){
     pgdir[i] = pentry;
     pentry += 0x100000;
   }
 }
-  
+
 
 int kprintf(char *fmt, ...);
 
@@ -66,10 +66,10 @@ int copystack() // copy IRQ mode stack to SVC mode stack
 {
   int *ip, *iq, i;
   //printf("copystack: running=%d\n", running->pid);
-  
+
   ip = (int *)&(running->kstack[SSIZE]) - 1;
   iq = (int *)&irq_stack_top - 1;
-  
+
   for (i=0; i<14; i++){ // copy 14 HIGH entries fro IRQ stack to SVC stack
       *ip = *iq;
       // printf("%x ", *ip);
@@ -85,7 +85,7 @@ int copystack() // copy IRQ mode stack to SVC mode stack
   // printf("%d usp=%x upc=%x\n", running->pid, running->usp, running->upc);
   running->ksp = (int *)&running->kstack[SSIZE-14];
 }
-  
+
 
 void timer0_handler();
 
@@ -105,23 +105,23 @@ int v31_handler()
 {
   int sicstatus = *(int *)(SIC_BASE_ADDR+0);
   //printf("v31_handler: sicstatus=%x ", sicstatus);
-  
+
   if (sicstatus & (1<<3)){
     //printf("KBD interrupt\n");
     kbd_handler();
   }
   if (sicstatus & (1<<22)){
-    //printf("SDC interrupt\n"); 
+    //printf("SDC interrupt\n");
     sdc_handler();
   }
-} 
+}
 
 int vectorInt_init()
 {
-  printf("vectorInterrupt_init()\n");
-  //  printf("t=%x u0=%x u1=%x kbd=%x\n", 
+  printf("vector-interrupt init\n");
+  //  printf("t=%x u0=%x u1=%x kbd=%x\n",
   //	 timer0_handler, uart0_handler, uart1_handler, kbd_handler);
- 
+
   // set up vectored interrupts for (REF: KCW's armHowtoVectorIntPlan file)
   // timer0 at IRQ4, UART0 at IRQ12, UART1 at IRQ13, KBD to IRQ31:
 
@@ -130,13 +130,13 @@ int vectorInt_init()
   //              vectoraddr2 (0x108) with ISR of UART1,
   //              vectoraddr3 (0x10C) with ISR of KBD
   // all are offsets from VIC base at 0x10140000; (SIC is NOT used at all)
-  *((int *)(VIC_BASE_ADDR+0x100)) = timer0_handler; 
-  *((int *)(VIC_BASE_ADDR+0x104)) = uart0_handler; 
-  *((int *)(VIC_BASE_ADDR+0x108)) = uart1_handler; 
-  *((int *)(VIC_BASE_ADDR+0x10C)) = (int)v31_handler; 
+  *((int *)(VIC_BASE_ADDR+0x100)) = timer0_handler;
+  *((int *)(VIC_BASE_ADDR+0x104)) = uart0_handler;
+  *((int *)(VIC_BASE_ADDR+0x108)) = uart1_handler;
+  *((int *)(VIC_BASE_ADDR+0x10C)) = (int)v31_handler;
   *((int *)(VIC_BASE_ADDR+0x110)) = (int)sdc_handler;
 
-  
+
   //(2). write to intControlRegs = E=1|IRQ# =  1xxxxx
   *((int *)(VIC_BASE_ADDR+0x200)) = 0x24;    //100100 at IRQ 4
   *((int *)(VIC_BASE_ADDR+0x204)) = 0x2C;    //101100 at IRQ 12
@@ -161,11 +161,11 @@ void irq_chandler(int usp, int upc, int spsr)
   /*************** no need to read status regs as in polling ***********
   int vicstatus, sicstatus;
   vicstatus = VIC_STATUS;
-  sicstatus = SIC_STATUS;  
-  printf("t0=%x u0=%x kbd=%x\n", timer0_handler, uart0_handler, kbd_handler);  
+  sicstatus = SIC_STATUS;
+  printf("t0=%x u0=%x kbd=%x\n", timer0_handler, uart0_handler, kbd_handler);
   ***********************************************************************/
   running->inkmode++;
-    
+
   int (*f)();                         // f is a function pointer
   f = *((int *)(VIC_BASE_ADDR+0x30)); // read ISR address in vectorAddr reg.
   f();                                // call the ISR function
@@ -176,7 +176,7 @@ void irq_chandler(int usp, int upc, int spsr)
   if (f != timer0_handler && running->pid){
     printf("CH: %d: usp=%x upc=%x spsr=%x kmode=%d\n",
 	   running->pid, usp, upc, spsr, running->inkmode);
-  }  
+  }
   ************/
   if (swflag){
     //printf("%d IRQ switch\n", running->pid);
@@ -189,45 +189,45 @@ void irq_chandler(int usp, int upc, int spsr)
 }
 
 int main()
-{ 
+{
    color = RED;
    hasP1 = 0;
    KBD *kp = &kbd;
-   
+
    fbuf_init();
-   kprintf("                     Welcome to WANIX in Arm\n");
-   kprintf("LCD display initialized : fbuf = %x\n", fb);
+   kprintf("Welcome to WANIX in Arm\n");
+   kprintf("LCD display initialized: fbuf=%x\n", fb);
    color = CYAN;
-   kbd_init();  
+   kbd_init();
 
    // before LCD init, can't print anything yet
    vectorInt_init();
- 
+
    /* enable UART0 IRQ */
-   VIC_INTENABLE |= (1<<4);  // timer0,1 at 4 
+   VIC_INTENABLE |= (1<<4);  // timer0,1 at 4
    VIC_INTENABLE |= (1<<12); // UART0 at 12
    VIC_INTENABLE |= (1<<13); // UART1 at 13
    VIC_INTENABLE = 1<<31;    // SIC to VIC's IRQ31
 
    /* enable UART0 RXIM interrupt */
    UART0_IMSC = 1<<4;
-      
+
    /* enable UART1 RXIM interrupt */
    UART1_IMSC = 1<<4;
-  
+
    /* enable KBD IRQ */
    SIC_ENSET = 1<<3;  // KBD int=3 on SIC
    SIC_PICENSET = 1<<3;  // KBD int=3 on SIC
    // kbd->control = 1<<4;
    *(kp->base) = (1<<4);
-   
+
    /* enable KBD IRQ */
    SIC_INTENABLE |= (1<<3); // KBD int=bit3 on SIC
    SIC_INTENABLE |= (1<<22); //SDC int=bit22 on SIC
- 
+
    SIC_ENSET |= 1<<3;  // KBD int=3 on SIC
    SIC_ENSET |= 1<<22;  // SDC int=22 on SIC
- 
+
    timer_init();
    timer_start(0);
    sdc_init();
@@ -238,8 +238,8 @@ int main()
    kfork("init");
    hasP1 = 1;
 
-   kprintf("P0 switch to P1, enter a key : ");
-   mgetc(); printf("\n");
+   // kprintf("P0 switch to P1, enter a key : ");
+   // mgetc(); printf("\n");
 
    while(1){
      unlock();

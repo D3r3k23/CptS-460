@@ -32,34 +32,34 @@ int mountroot()
   struct buf *bp;
   char rootdev[16];
 
-  /******************   
+  /******************
   boot_dev = 3;   // set by default
-  
+
   dev = pno = boot_dev;
   printf("mount_root: boot_dev=%d\n", boot_dev);
 
   strcpy(rootdev, "/dev/hda");
   rootdev[strlen(rootdev)+1] = 0;
   rootdev[strlen(rootdev)] = pno+'0'; // assume pno <= 9
-  //printf("dev=%d  rootdev=%s\n", dev, rootdev); 
+  //printf("dev=%d  rootdev=%s\n", dev, rootdev);
   ****************/
   dev = 3;
-  // get super block of rootdev 
+  // get super block of rootdev
   getblock(1, mtbuf);
-  sp =(SUPER *)mtbuf; 
+  sp =(SUPER *)mtbuf;
   mp = &mounttab[0];
 
   /* copy super block info into mounttab[0] */
   mp->ninodes = sp->s_inodes_count;
   mp->nblocks = sp->s_blocks_count;
-  mp->dev = dev;        // with dev as index, this is redundant but keep it  
+  mp->dev = dev;        // with dev as index, this is redundant but keep it
   mp->busy = 1;
 
   strcpy(mp->name, rootdev);
   strcpy(mp->mount_name, "/");
-  
+
   // read root_dev's GD to record its BMAP, IMAP and IBLOCK in mouttab[0]
-  
+
   //  bp = bread(dev, 2);  // Assume all FS 1KB BLKSIZE, GD is in block# 2
   getblock(2, mtbuf);
   gp = (GD *)mtbuf;
@@ -70,8 +70,8 @@ int mountroot()
   bmap = mp->BMAP;
   imap = mp->IMAP;
   iblk = mp->IBLOCK;
-  printf("bmap=%d  imap=%d  iblock=%d\n", bmap, imap, iblk);
-  
+  printf("bmap=%d imap=%d iblock=%d\n", bmap, imap, iblk);
+
   /***** call iget(), which inc the Minode's refCount ****/
   root = iget(dev, 2);          // get root inode
 
@@ -83,13 +83,13 @@ int mountroot()
   //printf("mount_root  : root->lock=%d ", root->lock.value);
   V(&root->lock);
   //printf("After unlock: root->lock=%d\n", root->lock.value);
-  printf("/dev/hda%d mounted on / OK\n", dev);
- 
+  printf("/dev/hda%d mounted\n", dev);
+
   return(0);
-} 
+}
 
 int ksync()
-{ 
+{
   MINODE *mip; INODE *ip;
   int i, ref, count;
   struct buf *bp;

@@ -4,7 +4,7 @@ arm-none-eabi-as -mcpu=arm926ej-s us.s -o us.o
 echo "mount sdimage"
 sudo mount -o loop ../sdimage /mnt
 
-for CMD in test init login sh # ls
+for CMD in test init login sh ls cat
 do
     echo "====== mk $CMD ======"
     ./mku.sh $CMD

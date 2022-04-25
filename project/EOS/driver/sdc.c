@@ -41,7 +41,7 @@ void P(struct semaphore *s)
   ps = int_off();
     s->value--;
     if (s->value < 0){
-       //printf("P: block %d\n", running->pid); 
+       //printf("P: block %d\n", running->pid);
        running->status = BLOCK;
        enqueue(&s->queue, running);
        tswitch();
@@ -89,7 +89,7 @@ int sdc_handler()
   if (rxcount==BLKSIZE)
      printf("SDC interrupt ");
   **********/
-  
+
   // read status register to find out TXempty or RxAvail
   status = *(u32 *)(base + STATUS);
   oldcolor = color;
@@ -128,7 +128,7 @@ int sdc_handler()
            *(u32 *)(base + FIFO) = *(up + i);
        up += 16;
        txcount -= 64;
-       txbuf += 64;            // advance txbuf for next write  
+       txbuf += 64;            // advance txbuf for next write
        status = *(u32 *)(base + STATUS); // read status to clear Tx interrupt
     }
     color = oldcolor;
@@ -147,13 +147,13 @@ int sdc_init()
 {
   u32 RCA = (u32)0x45670000; // QEMU's hard-coded RCA
   base    = (u32)0x10005000; // PL180 base address
-  printf("sdc_init : ");
+  printf("sdc init: ");
   *(u32 *)(base + POWER) = (u32)0xBF; // power on
   *(u32 *)(base + CLOCK) = (u32)0xC6; // default CLK
- 
+
   // send init command sequence
   do_command(0,  0,   MMC_RSP_NONE);// idle state
-  do_command(55, 0,   MMC_RSP_R1);  // ready state  
+  do_command(55, 0,   MMC_RSP_R1);  // ready state
   //do_command(41, 1,   MMC_RSP_R3);  // argument must not be zero
   do_command(41, 0x0000FFFF,   MMC_RSP_R3);  // argument must not be zero
   do_command(2,  0,   MMC_RSP_R2);  // ask card CID
@@ -162,7 +162,7 @@ int sdc_init()
   do_command(16, 512, MMC_RSP_R1);  // set data block length
 
   // set interrupt MASK0 registers bits = RxFULL(17)|TxEmpty(18)
-  *(u32 *)(base + MASK0) = (1<<17)|(1<<18); 
+  *(u32 *)(base + MASK0) = (1<<17)|(1<<18);
 
   rxsem.value = 0;
   rxsem.queue = 0;
@@ -180,7 +180,7 @@ int getblock(int blk, char *buf)
   rxbuf = buf; rxcount = BLKSIZE;
   rxsem.value = 0;
   rxsem.queue = 0;
-  rxdone = 0; 
+  rxdone = 0;
 
   *(u32 *)(base + DATATIMER) = 0xFFFF0000;
   // write data_len to datalength reg
@@ -193,13 +193,13 @@ int getblock(int blk, char *buf)
   //printf("dataControl=%x\n", 0x93);
   // 0x93=|9|0011|=|9|DMA=0,0=BLOCK,1=Host<-Card,1=Enable
   *(u32 *)(base + DATACTRL) = 0x93;
-  
+
   // P0 must use polling during mount_root
   if (running->pid)
      P(&rxsem);
   else
     while(rxdone==0);
-  
+
   //printf("getblock return\n");
 }
 

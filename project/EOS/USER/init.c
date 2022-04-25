@@ -11,8 +11,10 @@ int main(int argc, char* argv[])
     int S0 = login("/dev/ttyS0");
     int S1 = login("/dev/ttyS1");
 
+    printf("init running\n");
+
     while (1) {
-        printf("init: wait for ZOMBIE child\n");
+        // printf("init: wait for ZOMBIE child\n");
         int status;
         int pid = wait(&status);
 
@@ -23,7 +25,7 @@ int main(int argc, char* argv[])
         } else if (pid == S1) {
             S1 = login("/dev/ttyS1");
         } else {
-            printf("init: buried an ORPHAN child P%d, status=%d\n", pid, status);
+            // printf("init: buried an ORPHAN child P%d, status=%d\n", pid, status);
         }
     }
 
@@ -34,7 +36,7 @@ int login(const char* dev)
 {
     int pid = fork();
     if (pid) { // Parent
-        printf("init: fork login P%d\n", pid);
+        // printf("init: fork login P%d\n", pid);
         return pid;
     }
     else { // Child

@@ -56,7 +56,7 @@ int kbd_init()
 {
   char scode;
   keyset = 1; // default to scan code set-1
-  
+
   KBD *kp = &kbd;
   kp->base = (char *)0x10006000;
   *(kp->base + KCNTL) = 0x10; // bit4=Enable bit0=INT on
@@ -67,7 +67,8 @@ int kbd_init()
   release = 0;
   control = 0;
 
-  printf("Detect KBD scan code: press the ENTER key : ");
+  printf("detecting KBD scan code...\n");
+  printf("Press the ENTER key: ");
   while( (*(kp->base + KSTAT) & 0x10) == 0);
   scode = *(kp->base + KDATA);
   printf("scode=%x ", scode);
@@ -124,7 +125,7 @@ void kbd_handler1()
   KBD *kp = &kbd;
 
   code = *(kp->base + KDATA);
-  
+
   //  if ((code & 0x80)==0)
   //printf("%x ", code);
 
@@ -132,7 +133,7 @@ void kbd_handler1()
   // Arrow keys: up=E048; down=E050; left=E04B; right=E04D
   // Rcontrol=E01D        Delete=E053/ RAlt=E038
 
-  if (code == 0xE0) 
+  if (code == 0xE0)
      esc++;              // inc esc bount by 1
 
   if (esc && esc < 2)    // only the first 0xE0, wait for next code
@@ -142,13 +143,13 @@ void kbd_handler1()
     if (code == 0xE0) // this is the 2nd E0 itself => real code will come next
        goto out;
 
-     // with esc==2, this must be the actual scan code, so handle it 
+     // with esc==2, this must be the actual scan code, so handle it
 
-     code &= 0x7F;         // leading bit off 
+     code &= 0x7F;         // leading bit off
 
      if (code == 0x53){   // Delete key ONLY USE is control-alt-del
        //if (control && alt) // this is NOT the Del key, so very unlikely
-	 // kreboot();        // to reboot by Cntl-Alt-Delete 
+	 // kreboot();        // to reboot by Cntl-Alt-Delete
        goto out;
      }
 
@@ -173,9 +174,9 @@ void kbd_handler1()
 
      kp->buf[kp->head++] = escKey;
      kp->head %= KBN;
-     //V(&kbData); 
+     //V(&kbData);
      kp->data++;
-      
+
      kp->buf[kp->head++] = '\n';
      kp->head %= KBN;
      kp->data++; kp->room--;
@@ -199,7 +200,7 @@ void kbd_handler1()
     goto out;
   }
 
-  // from here on, must be key press 
+  // from here on, must be key press
   if (code == LSHIFT || code == RSHIFT){
     shift = 1;
     goto out;
@@ -250,7 +251,7 @@ void kbd_handler1()
     for (i=1; i<NPROC; i++){  // give signal#2 to ALL on this terminal
       if (proc[i].status != FREE && strcmp(proc[i].res->tty, "/dev/tty0")==0){
 	proc[i].res->signal |= (1 << 2); // sh IGNore, so only children die
-      }   
+      }
     }
     c = '\n'; // force a line, let proc handle #2 signal when exit Kmode
   }
@@ -269,12 +270,12 @@ void kbd_handler1()
 
   kp->data++;
   kwakeup(&kp->data);
- 
+
   if (c=='\r'){
     kline++;
     kwakeup(&kline);
   }
- out:          
+ out:
   *(kp->base + KSTAT) = 0xFF;
   VIC_VADDR = 0xFF;
 
@@ -290,7 +291,7 @@ void kbd_handler1()
   scode = *(kp->base + KDATA);
 
   //printf("scan code = %x ", scode);
-  
+
   if (scode & 0x80)
     return;
   c = unsh[scode];
@@ -299,7 +300,7 @@ void kbd_handler1()
      printf("kbd interrupt: c=%x %c\n", c, c);
 
   //kputc(c);
-  
+
   kp->buf[kp->head++] = c;
   kp->head %= 128;
   kp->data++; kp->room--;
@@ -323,11 +324,11 @@ void kbd_handler2()
   scode = *(kp->base + KDATA);
   //  printf("scanCode = %x  ", scode);
 
-  if (scode == 0xF0){ // key release 
+  if (scode == 0xF0){ // key release
     release = 1;
     return;
   }
-  
+
   if (release && scode != 0x12){ // ordinay key release
     release = 0;
     return;
@@ -356,43 +357,43 @@ void kbd_handler2()
     control = 0;
     return;
   }
-    
+
   if (!shifted)
      c = ltab[scode];
   else
      c = utab[scode];
-  
+
   /********* catch Control-C ****************/
   if (control && scode == 0x21){ // Control-C
     // send signal 2 to processes on KBD
-    printf("Control-C: scode=%x\n", scode);
+    // printf("Control-C: scode=%x\n", scode);
     for (i=1; i<NPROC; i++){  // give signal#2 to ALL on this terminal
       if (proc[i].status != FREE && strcmp(proc[i].res->tty, "/dev/tty0")==0){
 	proc[i].res->signal |= (1 << 2); // sh IGNore, so only children die
-      }   
+      }
     }
     printf("\n");
     c = '\r'; // force a line, let proc handle #2 signal when exit Kmode
-   
+
     control = 0;
-  }   
+  }
 
   if (control && scode == 0x23){ // Control-D
     c = 0x4;
     printf("Control-D: c = %x\n", c);
     control = 0;
-  }   
+  }
 
   if (control && scode == 0x23){ // Control-D
     c = 0x04;
     printf("Control-D: c = %x\n", c);
-  }   
+  }
 
   kp->buf[kp->head++] = c;
   kp->head %= 128;
   kp->data++; kp->room--;
   kwakeup(&kp->data);
-  
+
   if (c=='\r'){
     kline++;
     kwakeup(&kline);
@@ -412,7 +413,7 @@ int kgetc()
 {
   char c;
   KBD *kp = &kbd;
-  //printf("%d in kgetc\n", running->pid); 
+  //printf("%d in kgetc\n", running->pid);
   lock();
 
   while(kp->data == 0){
@@ -442,7 +443,7 @@ int kgets(char s[ ])
   return strlen(s);
 }
 /*
-int getc()  // 
+int getc()  //
 {
   char c;
   KBD *kp = &kbd;
@@ -458,7 +459,7 @@ int getc()  //
   return c;
 }
 */
-int mgetc()  // 
+int mgetc()  //
 {
   char c;
   KBD *kp = &kbd;
@@ -478,11 +479,11 @@ int kgetline(char s[ ])
 {
   char c;
   KBD *kp = &kbd;
-  
+
   while (kline==0){
     ksleep(&kline);
   }
-  // fetch a line from kbuf[ ] 
+  // fetch a line from kbuf[ ]
   lock();
   while(1){
       c = kp->buf[kp->tail++];

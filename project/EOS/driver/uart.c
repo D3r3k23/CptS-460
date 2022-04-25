@@ -46,25 +46,25 @@ int kprintf(char *fmt, ...);
 /******
 #define DR      0
 #define SR      4
-#define FR     24  
+#define FR     24
 #define BUFLEN 64
 
 typedef volatile struct uart{
    char *base;               // base = DR at 0
 
-   // input buffer 
+   // input buffer
    char inbuf[BUFLEN];
    int inhead, intail;
    struct semaphore inchar;
 
-   // output buffer 
+   // output buffer
    char outbuf[BUFLEN];
    int outhead, outtail;
    struct semaphore outspace;
    char kline[LSIZE];
    int tx_on;
-   
-   // echo buffer 
+
+   // echo buffer
    char ebuf[BUFLEN];
    int ehead, etail, e_count;
 
@@ -79,17 +79,17 @@ int uart_init()
 {
   int i;
   UART *up;
-  kprintf("uart[0-4] init()\n");
+  kprintf("uart[0-4] init\n");
   for (i=0; i<4; i++){         // uart0 to uart2 are adjacent
     up = &uart[i];
-    up->base = (char *)(0x101F1000 + i*0x1000); // up->DR 
+    up->base = (char *)(0x101F1000 + i*0x1000); // up->DR
     if (i==3)
        up->base = (char *)(0x10009000); // uart3 at 0x10009000
 
     up->inhead = up->intail = 0;
     up->inchar.value = 0; up->inchar.queue = 0;
- 
-    up->outhead = up->outtail = up->tx_on = 0;  
+
+    up->outhead = up->outtail = up->tx_on = 0;
     up->outspace.value = BUFLEN; up->outspace.queue = 0;
 
     up->ehead =  up->etail = up->e_count = 0;
@@ -107,7 +107,7 @@ void uart0_handler() {
   color = GREEN;
 
   up = &uart[0];
-  while( *(up->base+FR) & 0x40 ==0 ); 
+  while( *(up->base+FR) & 0x40 ==0 );
 
   c = *(up->base + DR);
   //printf("uart0 interrupt c=%x %c\n", c, c);
@@ -117,12 +117,12 @@ void uart0_handler() {
     for (i=1; i<NPROC; i++){  // give signal#2 to ALL on this terminal
       if (proc[i].status != FREE && strcmp(proc[i].res->tty, "/dev/ttyS0")==0){
 	proc[i].res->signal |= (1 << 2); // sh IGNore, so only children die
-      }   
+      }
     }
     printf("\n");
     c = '\r'; // force a line, let proc handle #2 signal when exit Kmode
   }
-  //printf("head=%d tail=%d ", up->inhead, up->intail);  
+  //printf("head=%d tail=%d ", up->inhead, up->intail);
   up->inbuf[up->inhead++] = c;
   up->inhead %= BUFLEN;
   V(&up->inchar);       // inchar.value++; including '\r'
@@ -135,9 +135,9 @@ void uart1_handler() {
   UART *up;
   int i;
   color=WHITE;
-  
+
   up = &uart[1];
-  while( *(up->base+FR) & 0x40 == 0 ); 
+  while( *(up->base+FR) & 0x40 == 0 );
 
   c = *(up->base + DR);
   //printf("uart1 interrupt c=%x %c\n", c, c);
@@ -147,7 +147,7 @@ void uart1_handler() {
     for (i=1; i<NPROC; i++){  // give signal#2 to ALL on this terminal
       if (proc[i].status != FREE && strcmp(proc[i].res->tty, "/dev/ttyS1")==0){
 	proc[i].res->signal |= (1 << 2); // sh IGNore, so only children die
-      }   
+      }
     }
     printf("\n");
     c = '\r'; // force a line, let proc handle #2 signal when exit Kmode
@@ -160,7 +160,7 @@ void uart1_handler() {
   color=RED;
 }
 
-// TO DO: UART outputs should be intertupt-driven also 
+// TO DO: UART outputs should be intertupt-driven also
 
 int sputc(UART *up, char c)
 {
@@ -198,7 +198,7 @@ int sputs(char *s)
     if (*s=='\n')
       sputc(up,'\r');
   }
-   
+
 }
 
 int sprints(UART *up, char *s)
