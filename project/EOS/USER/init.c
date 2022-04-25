@@ -25,8 +25,6 @@ int main(int argc, char* argv[])
             // printf("init: buried an ORPHAN child P%d, status=%d\n", pid, status);
         }
     }
-
-    return 0;
 }
 
 int login(const char* dev)
