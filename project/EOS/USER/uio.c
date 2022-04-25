@@ -67,6 +67,10 @@ typedef struct stat {
 #define O_TRUNC		  01000	/* not fcntl */
 #define O_APPEND	  02000
 
+#define S_ISDIR(m) ((m >> 9) == 040)
+#define S_ISREG(m) ((m >> 12) == 010)
+#define S_ISLNK(m) ((m >> 12) == 012)
+
 #define EOF  -1
 
 #define exit mexit
@@ -113,7 +117,7 @@ void rpi(int x)
    rpi((int)x/10);
    putc(c);
 }
-  
+
 void printi(int x)
 {
     if (x==0){
@@ -157,7 +161,7 @@ void rpx(u32 x)
 }
 
 void printx(u32 x)
-{  
+{
   prints("0x");
    if (x==0){
       prints("0 ");

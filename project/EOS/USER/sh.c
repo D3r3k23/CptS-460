@@ -10,13 +10,13 @@ int source(const char* filename);
 int run_cmd(const char* cmd, const char** args, int nArgs);
 int cmd_exists(const char* cmd);
 
-static char user[32] = "";
-static char HOME[32] = "";
+const char* user = "";
+const char* HOME = "";
 
 int main(int argc, char* argv[])
 {
-    if (argc >= 2) strcpy(user, argv[1]);
-    if (argc >= 3) strcpy(HOME, argv[2]);
+    if (argc >= 2) user = argv[1];
+    if (argc >= 3) HOME = argv[2];
 
     if (strlen(HOME) > 0) {
         chdir(HOME);
@@ -135,5 +135,5 @@ int run_cmd(const char* cmd, const char** args, int nArgs)
 
 int cmd_exists(const char* cmd)
 {
-
+    return 1;
 }
