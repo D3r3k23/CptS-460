@@ -3,9 +3,9 @@
 #define TOKEN_LEN 128
 #include "tokenize.c"
 
-static const char* PASSWD_FILE = "/etc/passwd";
-
 int login(const char* username, const char* password);
+
+static const char* PASSWD_FILE = "/etc/passwd";
 
 int main(int argc, char* argv[])
 {

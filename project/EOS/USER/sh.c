@@ -51,7 +51,7 @@ int sh(const char* line)
     int nTokens = tokenize(line, ' ', tokens, 3);
 
     const char* cmd = tokens[0];
-    const char* arg = (nTokens >= 2) ? argv[1] : NULL;
+    const char* arg = (nTokens >= 2) ? tokens[1] : NULL;
 
     if (streq(cmd, "logout")) {
         printf("Goodbye\n");
@@ -72,25 +72,28 @@ int source(const char* filename)
     if (f < 0) {
         printf("error: could not open %s\n", filename);
         return 1;
-    }
+    } else if (!is_executable(filename)) {
+        printf("permission denied: %s\n", filename);
+        return 1;
+    } else {
+        char buf[2048];
+        read(f, buf, 2048);
 
-    char buf[2048];
-    read(f, buf, 2048);
+        close(f);
 
-    close(f);
+        char lines[128][TOKEN_LEN];
+        int nLines = tokenize(buf, '\n', lines, 128);
 
-    char lines[128][TOKEN_LEN];
-    int nLines = tokenize(buf, '\n', lines, 128);
-
-    int r = 0;
-    for (int i = 0; i < nLines; i++) {
-        const char* line = lines[i];
-        int status = sh(line);
-        if (status) {
-            r = status;
+        int r = 0;
+        for (int i = 0; i < nLines; i++) {
+            const char* line = lines[i];
+            int status = sh(line);
+            if (status) {
+                r = status;
+            }
         }
+        return r;
     }
-    return r;
 }
 
 int cd(const char* dir)

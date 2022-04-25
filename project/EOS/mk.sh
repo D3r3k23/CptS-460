@@ -18,8 +18,24 @@ echo "|===============================|"
 echo "|            mk USER            |"
 echo "|===============================|"
 rm -f sdimage
-cp ../original_sdimage sdimage
+cp ../base_sdimage sdimage
+
+echo "mount sdimage"
+sudo mount -o loop sdimage /mnt
+
 (cd USER; ./mk.sh)
+
+echo "cp test files"
+sudo cp -av test.sh /mnt/user/d3r3k
+
+echo "sdimage /bin:"
+ls -l /mnt/bin
+
+echo "sdimage /user/d3r3k:"
+ls -l /mnt/user/d3r3k
+
+echo "umount sdimage"
+sudo umount /mnt
 
 echo "|====== clean ======|"
 for DIR in driver fs
