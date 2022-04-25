@@ -27,16 +27,17 @@ int main(int argc, char* argv[])
     settty(dev);
 
     while (1) {
-        char username[128];
-        char password[128];
-
         printf("login:");
+        char username[128];
         gets(username);
 
-        printf("password:");
-        gets(password);
+        if (strlen(username) > 0) {
+            printf("password:");
+            char password[128];
+            gets(password);
 
-        login(username, password);
+            login(username, password);
+        }
     }
 
     return 0;

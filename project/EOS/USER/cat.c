@@ -32,27 +32,27 @@ int main(int argc, char* argv[])
             }
         }
     } else { // Cat stdin
-        char buf[1024];
+        char line[1024];
+        int nLine = 0;
         char s[1];
         int n;
-        int i = 0;
         while (n = read(0, s, 1)) {
             total += n;
 
-            if (*s == '\n') {
-                printf("\n%s\n", buf);
-                bzero(buf, 1024);
+            if (*s == '\r' || *s == '\n') {
+                printf("\r%s\n", line);
+                bzero(line, 1024);
             } else {
                 write(1, s, 1);
                 // if (*s == 3) {
                 //     return 0;
                 // }
-                if (i >= 1024) {
-                    printf("\n%s", buf);
-                    bzero(buf, 1024);
+                if (nLine >= 1024) {
+                    printf("%s", line);
+                    bzero(line, 1024);
                 } else {
-                    strcat(buf, s);
-                    i++;
+                    strcat(line, s);
+                    nLine++;
                 }
             }
         }
