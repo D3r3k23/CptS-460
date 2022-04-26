@@ -15,7 +15,6 @@ int main(int argc, char* argv[])
         }
         char buf[1024];
         char line[512];
-        bzero(line, 512);
         char* lp = line;
         int nLines = 0;
         int nLinesRequested = 0;
@@ -25,8 +24,7 @@ int main(int argc, char* argv[])
                 char c = buf[i];
                 if (c == '\r' || c == '\n') {
                     if (nLinesRequested == 0) {
-                        switch (getc())
-                        {
+                        switch (getc()) {
                             case 'q':
                                 return 0;
                             case '\r': case'\n':
@@ -51,7 +49,6 @@ int main(int argc, char* argv[])
         close(fd);
     } else { // more stdin
         char line[1024];
-        int nLine = 0;
         char s[1];
         int n;
         while (n = read(0, s, 1)) {
@@ -64,15 +61,14 @@ int main(int argc, char* argv[])
                 bzero(line, 1024);
             } else {
                 write(1, s, 1);
-                if (nLine >= 1024) {
+                if (strlen(line) >= 1023) {
                     printf("\r%s", line);
                     bzero(line, 1024);
                 } else {
                     strcat(line, s);
-                    nLine++;
                 }
             }
         }
     }
-    return total;
+    return !total;
 }

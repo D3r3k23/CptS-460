@@ -7,21 +7,23 @@ int main(int argc, char* argv[])
     if (argc < 2) {
         printf("Missing argument: pattern\n");
         return -1;
-    }
-    const char* pattern = argv[1];
-    int matches = 0;
-
-    if (argc >= 3) { // grep file
-        const char* filename = argv[2];
-        int fd = open(filename, O_RDONLY);
-        if (fd == -1) {
-            printf("grep error: could not open %s\n", filename);
-            return -1;
+    } else {
+        const char* pattern = argv[1];
+        int fd;
+        if (argc == 2) {
+            fd = STDIN;
+        } else {
+            const char* filename = argv[2];
+            fd = open(filename, O_RDONLY);
+            if (fd == -1) {
+                printf("grep error: could not open %s\n", filename);
+                return -1;
+            }
         }
         char buf[1024];
         char line[512];
-        bzero(line, 512);
         char* lp = line;
+        int matches = 0;
         int n;
         while (n = read(fd, buf, 1024)) {
             for (int i = 0; i < n; i++) {
@@ -38,10 +40,10 @@ int main(int argc, char* argv[])
                 }
             }
         }
-        close(fd);
+        if (fd != STDIN) {
+            close(fd);
+        }
         return matches;
-    } else { // grep stdin
-        printf("Still need to add grep stdin\n");
     }
 }
 

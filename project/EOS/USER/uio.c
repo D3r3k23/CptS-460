@@ -17,9 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /***********************************************************************
                       io.c file of MTX
 ***********************************************************************/
-char space = ' ';
 char *ctable = "0123456789ABCDEF";
-char cr = '\r';
 
 #define CTRL_C 3
 
@@ -96,6 +94,10 @@ typedef struct stat {
 
 #define exit mexit
 
+#define STDIN 0
+#define STDOUT 1
+#define STDERR 2
+
 #define C_ISNUMBER(c) (('0' <= (c)) && ((c) <= '9'))
 #define C_ISUPPER(c)  (('A' <= (c)) && ((c) <= 'Z'))
 #define C_ISLOWER(c)  (('a' <= (c)) && ((c) <= 'z'))
@@ -159,7 +161,7 @@ void rpi(int x)
 void printi(int x)
 {
     if (x==0){
-       prints("0 ");
+       prints("0");
        return;
     }
     if (x < 0){
@@ -167,7 +169,6 @@ void printi(int x)
        x = -x;
     }
     rpi((int)x);
-    putc(space);
 }
 
 void rpu(u32 x)
@@ -182,11 +183,10 @@ void rpu(u32 x)
 void printu(u32 x)
 {
     if (x==0){
-       prints("0 ");
+       prints("0");
        return;
     }
     rpu((u32)x);
-    putc(space);
 }
 
 void rpx(u32 x)
@@ -202,11 +202,10 @@ void printx(u32 x)
 {
   prints("0x");
    if (x==0){
-      prints("0 ");
+      prints("0");
       return;
    }
    rpx((u32)x);
-   putc(space);
 }
 
 
@@ -215,7 +214,7 @@ void printc(char c)
   putc(c);
   c = c&0x7F;
   if (c=='\n')
-    putc(cr);
+    putc('\r');
 }
 
 int printk(char *fmt,...)

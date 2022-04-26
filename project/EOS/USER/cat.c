@@ -33,7 +33,6 @@ int main(int argc, char* argv[])
         }
     } else { // cat stdin
         char line[1024];
-        int nLine = 0;
         char s[1];
         int n;
         while (n = read(0, s, 1)) {
@@ -46,16 +45,14 @@ int main(int argc, char* argv[])
                 bzero(line, 1024);
             } else {
                 write(1, s, 1);
-                if (nLine >= 1024) {
+                if (strlen(line) >= 1023) {
                     printf("\r%s", line);
                     bzero(line, 1024);
                 } else {
                     strcat(line, s);
-                    nLine++;
                 }
             }
         }
     }
-    // printf("\n");
-    return !!total;
+    return !total;
 }

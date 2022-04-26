@@ -76,7 +76,9 @@ symlink:
   ino = getino(&dev, temp);
 
   if (!ino){
-     prints("cd : no such directory\n\r");
+     prints("directory: ");
+     prints(pathname);
+     prints(" does not exist\n\r");
      return(-1);
   }
 

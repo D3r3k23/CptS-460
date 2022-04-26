@@ -14,7 +14,6 @@ int main(int argc, char* argv[])
     printf("init running\n");
 
     while (1) {
-        // printf("init: wait for ZOMBIE child\n");
         int status;
         int pid = wait(&status);
 
@@ -31,7 +30,6 @@ int login(const char* dev)
 {
     int pid = fork();
     if (pid) { // Parent
-        // printf("init: fork login P%d\n", pid);
         return pid;
     }
     else { // Child

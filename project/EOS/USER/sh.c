@@ -4,38 +4,57 @@
 #define TOKEN_LEN 128
 #include "tokenize.c"
 
+#define PIPE_READER 0
+#define PIPE_WRITER 1
+
+typedef enum redirection
+{
+    REDIRECT_NONE = 0,
+    REDIRECT_READ,
+    REDIRECT_WRITE,
+    REDIRECT_APPEND
+} REDIRECT;
+
 int sh(const char* line);
 int source(const char* filename);
-int cd(const char* dir);
+int new_sh(void);
 
 int sh_line(const char* line);
-int run_cmd(const char* cmd, const char** args, int nArgs);
+int exec_cmd(const char* line);
+int exec_pipe(const char* head, const char* tail);
+int activate_pipe(int pd[2], int RW);
+
+REDIRECT find_redirect(const char* line);
+int redirect(const char* filename, REDIRECT redirection);
 
 int cmd_exists(const char* cmd);
 int is_executable(const char* filename);
 
+int expand_variables(char* src);
+
 void sigint_handler(int sig);
 
-const char* PATH = "/bin";
-
-const char* user = "";
+// Environment variables
+const char* USER = "";
 const char* HOME = "";
+const char* PATH = "/bin";
 
 int main(int argc, char* argv[])
 {
-    if (argc >= 2) user = argv[1];
+    if (argc >= 2) USER = argv[1];
     if (argc >= 3) HOME = argv[2];
+    if (argc >= 4) PATH = argv[3];
 
     if (strlen(HOME) > 0) {
         chdir(HOME);
     }
 
-    signal(SIGINT, sigint_handler); // Ctrl+C
+    signal(SIGINT, sigint_handler); // Catch Ctrl+C
 
     while (1) {
         char cwd[64];
         getcwd(cwd);
-        printf("%s:%s$ ", user, cwd);
+        printf("%s:%s$ ", USER, cwd);
 
         char line[128];
         gets(line);
@@ -47,113 +66,235 @@ int main(int argc, char* argv[])
 
 int sh(const char* line)
 {
+    expand_variables(line);
+
     char tokens[3][TOKEN_LEN];
     int nTokens = tokenize(line, ' ', tokens, 3);
 
     const char* cmd = tokens[0];
-    const char* arg = (nTokens >= 2) ? tokens[1] : NULL;
+    const char* arg1 = (nTokens >= 2) ? tokens[1] : NULL;
 
     if (streq(cmd, "logout")) {
         printf("Goodbye\n");
         exit(0);
     } else if (streq(cmd, "sh")) {
-        const char* args[2] = { name, HOME };
-        return run_cmd("sh", args, 2);
+        return new_sh();
     } else if (streq(cmd, "source")) {
-        return source(arg);
+        return source(arg1);
     } else {
-        return sh_line(line);
+        int pid = fork();
+        if (!pid) { // Child
+            int r = sh_line(line);
+            if (r == -1) {
+                exit(-1);
+            }
+        } else { // Parent
+            int status;
+            pid = wait(&status);
+            return status;
+        }
     }
 }
 
 int source(const char* filename)
 {
-    int f = open(filename, O_RDONLY);
-    if (f < 0) {
-        printf("error: could not open %s\n", filename);
-        return 1;
-    } else if (!is_executable(filename)) {
-        printf("permission denied: %s\n", filename);
-        return 1;
+    if (!filename || strlen(filename) <= 0) {
+        printf("source error: no sh file provided\n");
+        return -1;
     } else {
-        char buf[2048];
-        read(f, buf, 2048);
+        int f = open(filename, O_RDONLY);
+        if (f < 0) {
+            printf("error: could not open %s\n", filename);
+            return -1;
+        } else if (!is_executable(filename)) {
+            printf("permission denied: %s\n", filename);
+            return -1;
+        } else {
+            char buf[2048];
+            read(f, buf, 2048);
+            close(f);
 
-        close(f);
+            char lines[128][TOKEN_LEN];
+            int nLines = tokenize(buf, '\n', lines, 128);
 
-        char lines[128][TOKEN_LEN];
-        int nLines = tokenize(buf, '\n', lines, 128);
-
-        int r = 0;
-        for (int i = 0; i < nLines; i++) {
-            const char* line = lines[i];
-            int status = sh(line);
-            if (status) {
-                r = status;
+            int r = 0;
+            for (int i = 0; i < nLines; i++) {
+                const char* line = lines[i];
+                int status = sh(line);
+                if (status) {
+                    r = status;
+                }
             }
+            return r;
         }
-        return r;
     }
 }
 
-int cd(const char* dir)
+int new_sh(void)
 {
-    if (!dir || strlen(dir) <= 0) {
-        dir = HOME;
-    }
-    return chdir(dir);
+    char cmd[32] = "sh";
+    strjoin(cmd, " ", USER);
+    strjoin(cmd, " ", HOME);
+    strjoin(cmd, " ", PATH);
+    return exec_cmd(cmd);
 }
 
-int sh_line(const char* line) // Recursive - for pipes/IO redirection
+int sh_line(const char* line)
+{
+    char pipe_components[8][TOKEN_LEN];
+    int nPipe_components = tokenize(line, '|', pipe_components, 8);
+    if (nPipe_components > 1) { // Has pipe
+        char head[128] = "";
+        for (int i = 0; i < nPipe_components - 1; i++) {
+            strjoin(head, "|", pipe_components[i]);
+        }
+        const char* tail = pipe_components[nPipe_components - 1];
+        return exec_pipe(head, tail);
+    } else {
+        return exec_cmd(line);
+    }
+}
+
+int exec_cmd(const char* line)
 {
     char tokens[16][TOKEN_LEN];
     int nTokens = tokenize(line, ' ', tokens, 16);
-
     const char* cmd = tokens[0];
-    const char* args[16];
-    int nArgs = nTokens - 1;
-    for (int i = 0; i < 16; i++) {
-        if (i < nArgs) {
-            args[i] = tokens[i + 1];
+    if (streq(cmd, "init") || streq(cmd, "login") || streq(cmd, "sh")) {
+        printf("Error: invalid cmd\n");
+        return -1;
+    } else {
+        REDIRECT redirection = find_redirect(line);
+        if (redirection && nTokens >= 3) {
+            const char* redirect_filename = tokens[nTokens - 1];
+            redirect(redirect_filename, redirection);
+        }
+        const char* args[16];
+        int nArgs = nTokens - 1;
+        if (redirection) {
+            nArgs -= 2;
+        }
+        for (int i = 0; i < 16; i++) {
+            if (i < nArgs) {
+                args[i] = tokens[i + 1];
+            } else {
+                args[i] = NULL;
+            }
+        }
+        if (streq(cmd, "pwd")) {
+            return pwd();
+        } else if (streq(cmd, "echo")) {
+            return printf("%s\n", (args[0]) ? args[0] : "");
+        } else if (streq(cmd, "cd")) {
+            return chdir((args[0]) ? args[0] : HOME);
+        } else if (cmd_exists(cmd)) {
+            char cmd_line[128];
+            strcpy(cmd_line, cmd);
+            for (int i = 0; i < nArgs; i++) {
+                strjoin(cmd_line, " ", args[i]);
+            }
+            exec(cmd_line);
         } else {
-            args[i] = NULL;
+            printf("unknown cmd: %s\n", cmd);
+            return -1;
         }
     }
-    if (streq(cmd, "pwd")) {
-        return pwd();
-    } else if (streq(cmd, "cd")) {
-        return cd(args[0]);
-    } else if (cmd_exists(cmd)) {
-        if (streq(cmd, "init") || streq(cmd, "login") || streq(cmd, "sh")) {
-            printf("Error: invalid cmd\n");
-            return -1;
-        } else {
-            return run_cmd(cmd, args, nArgs);
+}
+
+int exec_pipe(const char* head, const char* tail)
+{
+    // 1. Create pipe
+    int pd[2];
+    pipe(pd);
+
+    int head_status = 0;
+    int pid = fork();
+    if (pid) { // Parent: tail
+        activate_pipe(pd, PIPE_READER); // 2. Activate pipe reader for parent
+        int status;
+        pid = wait(&status); // 3. Wait for child to finish
+        if (status) {
+            head_status = status;
         }
+    } else { // Child: head
+        activate_pipe(pd, PIPE_WRITER); // 4. Activate pipe writer for child
+        int r = sh_line(head); // 5. Run head
+        if (r == -1) { // If sh_line failed to exec cmd
+            exit(-1);
+        }
+    } // Parent
+    if (head_status != -1) {
+        return sh_line(tail); // 6. Run tail
     } else {
-        printf("unknown cmd: %s\n", cmd);
         return -1;
     }
 }
 
-int run_cmd(const char* cmd, const char** args, int nArgs)
+#if 0
+int activate_pipe(int pd[2], int RW)
 {
-    char cmd_line[128];
-    strcpy(cmd_line, cmd);
-    for (int i = 0; i < nArgs; i++) {
-        strjoin(cmd_line, " ", args[i]);
+    RW = !!RW;
+    close(RW);
+    dup2(pd[RW], RW);
+    close(pd[!RW]);
+}
+#else
+int activate_pipe(int pd[2], int RW)
+{
+    switch (RW) {
+        case PIPE_READER:
+            close(STDIN);
+            dup2(pd[PIPE_READER], STDIN);
+            close(pd[PIPE_WRITER]);
+            return 1;
+        case PIPE_WRITER:
+            close(STDOUT);
+            dup2(pd[PIPE_WRITER], STDOUT);
+            close(pd[PIPE_READER]);
+            return 1;
+        default:
+            return 0;
     }
+}
+#endif
 
-    int pid = fork();
-    if (pid) {
-        int status;
-        pid = wait(&status);
-        return status;
-    } else {
-        exec(cmd_line);
+REDIRECT find_redirect(const char* line)
+{
+    char tokens[4][TOKEN_LEN];
+    int nTokens = tokenize(line, ' ', tokens, 16);
 
-        // exec failed //
-        return -1;
+    REDIRECT redirection = REDIRECT_NONE;
+    const char* redirect_filename = NULL;
+    if (nTokens >= 3) {
+        const char* potential_redirect_token = tokens[nTokens - 2];
+        if (streq(potential_redirect_token, "<")) {
+            return REDIRECT_READ;
+        } else if (streq(potential_redirect_token, ">")) {
+            return REDIRECT_WRITE;
+        } else if (streq(potential_redirect_token, ">>")) {
+            return REDIRECT_APPEND;
+        }
+    }
+    return REDIRECT_NONE;
+}
+
+int redirect(const char* filename, REDIRECT redirection)
+{
+    switch (redirection) {
+        case REDIRECT_READ:
+            close(STDIN);
+            open(filename, O_RDONLY);
+            return 1;
+        case REDIRECT_WRITE:
+            close(STDOUT);
+            open(filename, O_WRONLY | O_CREAT);
+            return 1;
+        case REDIRECT_APPEND:
+            close(STDOUT);
+            open(filename, O_WRONLY | O_CREAT | O_APPEND);
+            return 1;
+        default:
+            return 0;
     }
 }
 
@@ -168,7 +309,6 @@ int cmd_exists(const char* cmd)
             char path[64];
             strcpy(path, PATH);
             strjoin(path, "/", cmd);
-
             return is_executable(path);
         }
     }
@@ -198,6 +338,34 @@ int is_executable(const char* filename)
             }
         }
     }
+}
+
+int expand_variables(char* src)
+{
+    int n = 0;
+    while (*src) {
+        if (*src == '$') {
+            const char* var_name = src + 1;
+            int var_length = strlen(var_name);
+            const char* value = NULL;
+            if (strncmp(var_name, "USER", 4) == 0) value = USER;
+            if (strncmp(var_name, "HOME", 4) == 0) value = HOME;
+            if (strncmp(var_name, "PATH", 4) == 0) value - PATH;
+            if (value) {
+                n++;
+                int value_length = strlen(value);
+                int shift_amount = value_length - (var_length + 1);
+                strshift(src, shift_amount);
+                memcpy(src, value, value_length);
+                src += value_length;
+            } else {
+                src += strlen(var_length);
+            }
+        } else {
+            src++;
+        }
+    }
+    return n;
 }
 
 void sigint_handler(int sig)

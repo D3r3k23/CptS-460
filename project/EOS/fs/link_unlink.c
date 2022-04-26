@@ -34,7 +34,7 @@ int klink(char *y, char *z)
  printf("klink: %s %s\n", oldfile, newfile);
  //kgetc();
 
- if (oldfile[0] == '/') 
+ if (oldfile[0] == '/')
      odev = root->dev;
  else
      odev = running->res->cwd->dev;
@@ -46,7 +46,7 @@ int klink(char *y, char *z)
    return -1;
  }
 
- if (newfile[0] == '/') 
+ if (newfile[0] == '/')
      ndev = root->dev;
  else
      ndev = running->res->cwd->dev;
@@ -58,7 +58,7 @@ int klink(char *y, char *z)
    return -1;
  }
 
- // OLD cannot be DIR   
+ // OLD cannot be DIR
  omip = iget(odev, oino);
 
  if ((omip->INODE.i_mode & 0040000)==0040000){
@@ -91,26 +91,26 @@ int klink(char *y, char *z)
    return -1;
  }
 
- pmip = iget(ndev, pino);     
+ pmip = iget(ndev, pino);
 
  r = enter_name(pmip, omip->ino, child);
 
  omip->INODE.i_links_count++;
  omip->dirty = 1;
- printf("inode's link_count=%d\n", omip->INODE.i_links_count); 
+ printf("inode's link_count=%d\n", omip->INODE.i_links_count);
 
  iput(omip);
  iput(pmip);
 
  return(r);
-} 
+}
 
 int kunlink(char *y)   // y->string in Usapce
 {
   int i,j;
   int dev,r;
   u32 pino, ino;
-  
+
   MINODE *mip, *pmip;
   char filename[32];
   char parent[32], child[32];
@@ -121,11 +121,11 @@ int kunlink(char *y)   // y->string in Usapce
     return -1;
   }
 
-  if (filename[0] == '/') 
+  if (filename[0] == '/')
       dev = root->dev;
   else
       dev = running->res->cwd->dev;
-  
+
   ino = getino(&dev, filename);
   if (!ino){
     printf("no such file %s\n", filename);
@@ -144,13 +144,13 @@ int kunlink(char *y)   // y->string in Usapce
      printf("not owner\n");
      iput(mip);
      return -1;
-  }  
+  }
   // remove basename from parent DIR
   strcpy(child,  (char *)basename(filename));
   strcpy(parent, (char *)dirname(filename));
-  printf("parent=%s  child=%s\n", parent, child);
- 
-  if (filename[0] == '/') 
+  // printf("parent=%s  child=%s\n", parent, child);
+
+  if (filename[0] == '/')
       dev = root->dev;
   else
       dev = running->res->cwd->dev;
@@ -158,13 +158,13 @@ int kunlink(char *y)   // y->string in Usapce
   pino = getino(&dev, parent);
   pmip = iget(dev, pino);
 
-  rm_child(pmip, mip->ino, child); 
+  rm_child(pmip, mip->ino, child);
   pmip->dirty = 1;
   iput(pmip);
 
   // dec inode's link_count
   mip->INODE.i_links_count--;
-  printf("inode's link_count=%d\n", mip->INODE.i_links_count);
+  // printf("inode's link_count=%d\n", mip->INODE.i_links_count);
 
   if (mip->INODE.i_links_count > 0){
      mip->dirty = 1;
@@ -172,17 +172,17 @@ int kunlink(char *y)   // y->string in Usapce
      return 0;
   }
 
-  printf("%s link_count=0 => deallocate data blocks and INODE\n", filename);
+  // printf("%s link_count=0 => deallocate data blocks and INODE\n", filename);
   if (!(mip->INODE.i_mode & 012000)==0120000) // symlink file has no data block
       truncate(mip);
 
   idalloc(mip->dev, (u32)mip->ino);
 
-  iput(mip);         // must unlock mip 
+  iput(mip);         // must unlock mip
 
   return(0);
 }
- 
+
 int ksymlink(char *y, char *z)
 {
   // symlink oldfile=pathname newfile=parameter
@@ -208,7 +208,7 @@ int ksymlink(char *y, char *z)
  printf("ksymlink: %s %s\n", oldfile, newfile);
  // kgetc();
 
- if (oldfile[0] == '/') 
+ if (oldfile[0] == '/')
      odev = root->dev;
  else
      odev = running->res->cwd->dev;
@@ -220,7 +220,7 @@ int ksymlink(char *y, char *z)
    return -1;
  }
 
- if (newfile[0] == '/') 
+ if (newfile[0] == '/')
      ndev = root->dev;
  else
      ndev = running->res->cwd->dev;
@@ -232,7 +232,7 @@ int ksymlink(char *y, char *z)
    return -1;
  }
 
- // creat a newfile /x/y/z 
+ // creat a newfile /x/y/z
  strcpy(child,  (char *)basename(newfile));
  strcpy(parent, (char *)dirname(newfile));
  printf("parent=%s  child=%s\n", parent, child);
@@ -247,7 +247,7 @@ int ksymlink(char *y, char *z)
 
  /********* symlink OK even if dev are not the same ***********/
 
- pmip = iget(odev, pino);     
+ pmip = iget(odev, pino);
  // call mycreat(pmip, child) to create a REG file
  printf("CALL MYCREAT\n");
 
@@ -275,7 +275,7 @@ int ksymlink(char *y, char *z)
 
  nmip->dirty = 1;
 
- printf("name=%s type=%x size=%d refCount=%d\n",(char *)nmip->INODE.i_block, 
+ printf("name=%s type=%x size=%d refCount=%d\n",(char *)nmip->INODE.i_block,
 	nmip->INODE.i_mode, nmip->INODE.i_size, nmip->refCount);
 
  iput(nmip);
@@ -285,7 +285,7 @@ int ksymlink(char *y, char *z)
  printf("symlink %s %s OK\n", oldfile, newfile);
  return 0;
 }
-     
+
 int kreadlink(char *y, char *z) // z->char[60] in Uspace
 {
   unsigned long ino;
@@ -296,7 +296,7 @@ int kreadlink(char *y, char *z) // z->char[60] in Uspace
 
   //  char parent[32], child[32], temp[32], saveParent[32];
 
-  get_param(y, filename);   // fetch filename from Uspace    
+  get_param(y, filename);   // fetch filename from Uspace
 
   //  printf("\nkreadlinK %s\n", filename); kgetc();
 
@@ -304,11 +304,11 @@ int kreadlink(char *y, char *z) // z->char[60] in Uspace
     return -1;
   }
 
-  if (filename[0] == '/') 
+  if (filename[0] == '/')
       dev = root->dev;
   else
       dev = running->res->cwd->dev;
-  
+
   ino = getino(&dev, filename);
   if (!ino){
     printf("no such file %s\n", filename);

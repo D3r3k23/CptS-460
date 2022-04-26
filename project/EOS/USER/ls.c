@@ -4,7 +4,7 @@
 #define TOKEN_LEN 128
 #include "tokenize.c"
 
-void ls_file(const char* filename);
+void ls_file(const char* filename, int max_username_length);
 void ls_dir(const char* dirname);
 
 int get_username(u16 uid, char* username);
@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
         }
 
         if (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode)) {
-            ls_file(filename);
+            ls_file(filename, -1);
         } else if (S_ISDIR(st.st_mode)) {
             ls_dir(filename);
         } else {
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void ls_file(const char* filename)
+void ls_file(const char* filename, int max_username_length)
 {
     STAT st;
     int r = stat(filename, &st);
@@ -56,13 +56,40 @@ void ls_file(const char* filename)
     if (mode & S_IWOTH) putc('w'); else putc('-');
     if (mode & S_IXOTH) putc('x'); else putc('-');
 
-    // Align all this into columns
+    u16 nLink = st.st_nlink;
+    if (0 <= nLink && nLink <= 9) {
+        printf(" ");
+    }
+    printf(" %u", nLink);
 
-    printf("  %u", st.st_nlink);
-    char username[32];
-    get_username(st.st_uid, username);
-    printf(" %s", username);
-    printf(" %d", st.st_size);
+    char owner[32];
+    get_username(st.st_uid, owner);
+    printf(" %s", owner);
+    if (max_username_length == -1) {
+        max_username_length = strlen(owner);
+    }
+    for (int i = strlen(owner); i < max_username_length; i++) {
+        putc(' ');
+    }
+
+    const char* size_unit = "";
+    long size = st.st_size;
+    if (1000 <= size && size <= 1000000) {
+        size /= 1000;
+        size_unit = "k";
+    } else if (1000000 <= size && size <= 1000000000) {
+        size /= (1000000);
+        size_unit = "M";
+    } else {
+        putc(' ');
+    }
+    if (0 <= size && size <= 9) {
+        putc(' ');
+        putc(' ');
+    } else if (10 <= size && size <= 99) {
+        putc(' ');
+    }
+    printf(" %d%s", size, size_unit);
 
     const char* basename;
     char path_components[16][TOKEN_LEN];
@@ -72,7 +99,7 @@ void ls_file(const char* filename)
     } else {
         basename = filename;
     }
-    printf("    %s", basename);
+    printf(" %s", basename);
 
     if (S_ISLNK(mode)) {
         char buf[4096];
@@ -85,7 +112,25 @@ void ls_file(const char* filename)
 void ls_dir(const char* dirname)
 {
     char buf[DIR_BLKSIZE];
+    int username_length = 0;
     int n = 0;
+    for (DIR* dir = read_dir(dirname, buf, NULL); dir; dir = read_dir(NULL, buf, dir)) {
+        n++;
+        char name[32];
+        get_dir_entry_name(dir, name);
+        char path[64];
+        strcpy(path, dirname);
+        strjoin(path, "/", name);
+
+        STAT st;
+        stat(path, &st);
+        char owner[32];
+        get_username(st.st_uid, owner);
+        int length = strlen(owner);
+        if (length > username_length) {
+            username_length = length;
+        }
+    }
     for (DIR* dir = read_dir(dirname, buf, NULL); dir; dir = read_dir(NULL, buf, dir)) {
         char name[32];
         get_dir_entry_name(dir, name);
@@ -94,11 +139,10 @@ void ls_dir(const char* dirname)
             char path[64];
             strcpy(path, dirname);
             strjoin(path, "/", name);
-            ls_file(path);
-            n++;
+            ls_file(path, username_length);
         }
     }
-    printf("total: %d\n", n);
+    printf("total: %d\n", n - 2);
 }
 
 int get_username(u16 uid, char* username)

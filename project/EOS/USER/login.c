@@ -15,9 +15,8 @@ int main(int argc, char* argv[])
     }
     const char* dev = argv[1];
 
-    // Close stdin, stdout
-    close(0);
-    close(1);
+    close(STDIN);
+    close(STDOUT);
 
     // Open on dev
     int stdin  = open(dev, O_RDONLY);
@@ -73,7 +72,9 @@ int login(const char* username, const char* password)
                         printf("Incorrect password\n");
                         return -1;
                     } else {
-                        printf("%s logging in...\n", username);
+                        char dev[16];
+                        gettty(dev);
+                        printf("%s logging in on %s...\n", username, dev);
                         const char* f_gid =    fields[2];
                         const char* f_uid =     fields[3];
                         const char* f_fullname = fields[4];

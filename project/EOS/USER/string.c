@@ -154,3 +154,26 @@ int atoi(char *s)
   }
   return v;
 }
+
+char* strshift(char* s, int amount)
+{
+    if (amount > 0) {
+        char* c = s;
+        while (*(c + amount)) {
+            c++;
+        }
+
+        while (c >= s) {
+            *(c + amount) = *c;
+            c--;
+        }
+        return s + amount;
+    } else {
+        char* c = s;
+        while (*(c + amount - 1)) {
+            *c = *(c + amount);
+            c++;
+        }
+        return s;
+    }
+}
