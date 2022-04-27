@@ -36,13 +36,15 @@ echo "umount sdimage"
 sudo umount /mnt
 
 echo "|====== clean ======|"
-for DIR in driver fs
-do
-    echo "clean $DIR"
-    rm $DIR/*.o
-done
-for DIR in kernel USER
-do
-    echo "clean $DIR"
-    rm $DIR/*.o $DIR/*.elf $DIR/*.bin
-done
+echo clean driver
+rm driver/*.o
+
+echo clean fs
+rm fs/*.o
+
+echo clean kernel
+rm kernel/*.o kernel/*.elf kernel/*.bin
+
+echo clean USER
+rm USER/*.o
+rm USER/cmd/*.o USER/cmd/*.elf USER/cmd/*.bin

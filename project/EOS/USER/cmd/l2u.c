@@ -20,11 +20,7 @@ int main(int argc, char* argv[])
             if (r >= 0 && S_ISDIR(st.st_mode)) {
                 strjoin(upper_filename, "/", lower_filename);
             }
-            r = stat(upper_filename, &st);
-            if (r < 0) { // File not found
-                creat(upper_filename);
-            }
-            int upper_fd = open(upper_filename, O_WRONLY);
+            int upper_fd = open(upper_filename, O_WRONLY | O_CREAT);
             if (upper_fd == -1) {
                 printf("l2u error: failed to open %s\n", upper_filename);
                 close(lower_fd);

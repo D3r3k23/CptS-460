@@ -5,8 +5,8 @@ for CMD in test init login sh cat cp grep l2u ls mkdir more rm
 do
     echo "====== mk $CMD ======"
     ./mku.sh $CMD
-    sudo cp -av $CMD.bin /mnt/bin/$CMD
-    sudo chown 0:0 /mnt/bin/$CMD
+    sudo cp -av cmd/$CMD.bin /mnt/bin/$CMD
+    sudo chown root /mnt/bin/$CMD
 done
 
 echo "installed user programs on sdimage:"

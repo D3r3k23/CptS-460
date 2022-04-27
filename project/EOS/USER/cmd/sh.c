@@ -30,6 +30,7 @@ int redirect(const char* filename, REDIRECT redirection);
 int cmd_exists(const char* cmd);
 int is_executable(const char* filename);
 
+int echo(const char* line);
 int expand_variables(char* src);
 
 void sigint_handler(int sig);
@@ -47,6 +48,8 @@ int main(int argc, char* argv[])
 
     if (strlen(HOME) > 0) {
         chdir(HOME);
+    } else {
+        chdir("/");
     }
 
     signal(SIGINT, sigint_handler); // Catch Ctrl+C
@@ -77,6 +80,8 @@ int sh(const char* line)
     if (streq(cmd, "logout")) {
         printf("Goodbye\n");
         exit(0);
+    } else if (streq(cmd, "exit")) {
+        exit((arg1) ? atoi(arg1) : 0);
     } else if (streq(cmd, "sh")) {
         return new_sh();
     } else if (streq(cmd, "source")) {
@@ -120,6 +125,9 @@ int source(const char* filename)
             int r = 0;
             for (int i = 0; i < nLines; i++) {
                 const char* line = lines[i];
+                if (line[0] == '#') { // Comment
+                    continue;
+                }
                 int status = sh(line);
                 if (status) {
                     r = status;
@@ -132,20 +140,32 @@ int source(const char* filename)
 
 int new_sh(void)
 {
-    char cmd[32] = "sh";
-    strjoin(cmd, " ", USER);
-    strjoin(cmd, " ", HOME);
-    strjoin(cmd, " ", PATH);
-    return exec_cmd(cmd);
+    int pid = fork();
+    if (!pid) { // Child
+        char cmd[32] = "sh";
+        strjoin(cmd, " ", USER);
+        strjoin(cmd, " ", HOME);
+        strjoin(cmd, " ", PATH);
+        int r = exec_cmd(cmd);
+        if (r = -1) {
+            exit(-1);
+        }
+    } else { // Parent
+        int status;
+        pid = wait(&status);
+        return status;
+    }
 }
 
 int sh_line(const char* line)
 {
+    printf("sh_line: %s\n", line);
     char pipe_components[8][TOKEN_LEN];
     int nPipe_components = tokenize(line, '|', pipe_components, 8);
     if (nPipe_components > 1) { // Has pipe
-        char head[128] = "";
-        for (int i = 0; i < nPipe_components - 1; i++) {
+        char head[128];
+        strcpy(head, pipe_components[0]);
+        for (int i = 1; i < nPipe_components - 1; i++) {
             strjoin(head, "|", pipe_components[i]);
         }
         const char* tail = pipe_components[nPipe_components - 1];
@@ -157,10 +177,15 @@ int sh_line(const char* line)
 
 int exec_cmd(const char* line)
 {
+    printf("exec_cmd: %s\n", line);
+
     char tokens[16][TOKEN_LEN];
     int nTokens = tokenize(line, ' ', tokens, 16);
+    for (int i = 0; i < nTokens; i++) {
+        printf("token[%d]=\"%s\"\n", i, tokens[i]);
+    }
     const char* cmd = tokens[0];
-    if (streq(cmd, "init") || streq(cmd, "login") || streq(cmd, "sh")) {
+    if (streq(cmd, "init") || streq(cmd, "login")) {
         printf("Error: invalid cmd\n");
         return -1;
     } else {
@@ -184,7 +209,7 @@ int exec_cmd(const char* line)
         if (streq(cmd, "pwd")) {
             return pwd();
         } else if (streq(cmd, "echo")) {
-            return printf("%s\n", (args[0]) ? args[0] : "");
+            return echo(line);
         } else if (streq(cmd, "cd")) {
             return chdir((args[0]) ? args[0] : HOME);
         } else if (cmd_exists(cmd)) {
@@ -203,28 +228,37 @@ int exec_cmd(const char* line)
 
 int exec_pipe(const char* head, const char* tail)
 {
+    printf("pipe: head=[%s] tail=[%s]\n", head, tail);
+
     // 1. Create pipe
     int pd[2];
     pipe(pd);
 
     int head_status = 0;
+    printf("pipe: forking child\n");
     int pid = fork();
     if (pid) { // Parent: tail
+        printf("pipe parent: activate reader for tail\n");
         activate_pipe(pd, PIPE_READER); // 2. Activate pipe reader for parent
         int status;
+        printf("pipe parent: wait\n");
         pid = wait(&status); // 3. Wait for child to finish
         if (status) {
             head_status = status;
         }
     } else { // Child: head
+        printf("pipe child: activate writer for head\n");
         activate_pipe(pd, PIPE_WRITER); // 4. Activate pipe writer for child
+        printf("pipe child: run head\n");
         int r = sh_line(head); // 5. Run head
-        if (r == -1) { // If sh_line failed to exec cmd
+        if (r == -1) {
             exit(-1);
         }
-    } // Parent
+    }
+    // Parent
     if (head_status != -1) {
-        return sh_line(tail); // 6. Run tail
+        printf("pipe child: run tail\n");
+        return exec_cmd(tail); // 6. Run tail
     } else {
         return -1;
     }
@@ -236,19 +270,16 @@ int activate_pipe(int pd[2], int RW)
     RW = !!RW;
     close(RW);
     dup2(pd[RW], RW);
-    close(pd[!RW]);
 }
 #else
 int activate_pipe(int pd[2], int RW)
 {
     switch (RW) {
         case PIPE_READER:
-            close(STDIN);
             dup2(pd[PIPE_READER], STDIN);
             close(pd[PIPE_WRITER]);
             return 1;
         case PIPE_WRITER:
-            close(STDOUT);
             dup2(pd[PIPE_WRITER], STDOUT);
             close(pd[PIPE_READER]);
             return 1;
@@ -338,6 +369,34 @@ int is_executable(const char* filename)
             }
         }
     }
+}
+
+int echo(const char* line)
+{
+    int start = 0;
+    for (int i = 0; i < strlen(line); i++) {
+        if (line[i] == '"') {
+            if (!start) {
+                start = i + 1;
+            } else {
+                int end = i - 1;
+                int length = end - start + 1;
+                char msg[128] = "";
+                if (length > 0) {
+                    strncpy(msg, &line[start], length);
+                }
+                printf("%s\n", msg);
+                return 0;
+            }
+        }
+    }
+    printf("echo syntax error: ");
+    if (start) {
+        printf("no closing \"\n");
+    } else {
+        printf("enclose msg with\"\"\n");
+    }
+    return -1;
 }
 
 int expand_variables(char* src)

@@ -15,14 +15,13 @@ int main(int argc, char* argv[])
     }
     const char* dev = argv[1];
 
-    close(STDIN);
-    close(STDOUT);
-
     // Open on dev
     int stdin  = open(dev, O_RDONLY);
-    int stdout  = open(dev, O_WRONLY);
-    int stderror = open(dev, O_WRONLY);
-
+    int stdout = open(dev, O_WRONLY);
+    int stderr = open(dev, O_WRONLY);
+    if (stdin != STDIN || stdout != STDOUT || stderr != STDERR) {
+        return 1;
+    }
     settty(dev);
 
     while (1) {
@@ -84,9 +83,7 @@ int login(const char* username, const char* password)
                         int gid = atoi(f_gid);
                         int uid = atoi(f_uid);
                         chuid(uid, gid);
-
-                        printf("Welcome home, %s!\n", f_fullname);
-                        chdir(f_homedir);
+                        printf("Welcome, %s!\n", f_fullname);
 
                         char cmd[64];
                         strcpy(cmd, f_program);

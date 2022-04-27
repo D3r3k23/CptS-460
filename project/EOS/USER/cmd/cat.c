@@ -32,27 +32,18 @@ int main(int argc, char* argv[])
             }
         }
     } else { // cat stdin
-        char line[1024];
-        char s[1];
-        int n;
-        while (n = read(0, s, 1)) {
-            total += n;
-            if (*s == CTRL_C) {
-                printf("\r%s\n\n", line);
-                return 0;
-            } else if (*s == '\r' || *s == '\n') {
-                printf("\r%s\n", line);
-                bzero(line, 1024);
+        char lc = '\0';
+        char c;
+        while (read(STDIN, &c, 1)) {
+            total++;
+            if (c == '\r' && lc != '\n' && lc != '\r') {
+                putc('\n');
+                putc('\r');
             } else {
-                write(1, s, 1);
-                if (strlen(line) >= 1023) {
-                    printf("\r%s", line);
-                    bzero(line, 1024);
-                } else {
-                    strcat(line, s);
-                }
+                putc(c);
             }
         }
+        lc = c;
     }
     return !total;
 }

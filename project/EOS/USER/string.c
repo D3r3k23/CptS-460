@@ -177,3 +177,15 @@ char* strshift(char* s, int amount)
         return s;
     }
 }
+
+int strall(const char* str, const char* chars)
+{
+    for (char* s = str; *s; s++) {
+        for (char* c = chars; *c; c++) {
+            if (*s != *c) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
