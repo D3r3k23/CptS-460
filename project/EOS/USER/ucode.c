@@ -336,6 +336,13 @@ int gettty(char *tty)
    return syscall(41, tty, 0);
 }
 
+int isatty(int fd)
+{
+   STAT st;
+   fstat(fd, &st);
+   return (st.st_mode & 0x2000) && ((st.st_mode & 0xF000) != 0xF000);
+}
+
 
 int dup(int fd)
 {

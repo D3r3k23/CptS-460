@@ -94,7 +94,7 @@ typedef struct ext2_super_block {
 	 * the incompatible feature set is that if there is a bit set
 	 * in the incompatible feature set that the kernel doesn't
 	 * know about, it should refuse to mount the filesystem.
-	 * 
+	 *
 	 * e2fsck's requirements are more strict; if it doesn't know
 	 * about a feature in either the compatible or incompatible
 	 * feature set, it must abort and not try to meddle with
@@ -153,7 +153,7 @@ typedef struct ext2_dir_entry_2 {
 
 
 /* Default dir and regulsr file modes */
-#define DIR_MODE          0040777 
+#define DIR_MODE          0040777
 #define FILE_MODE         0100644
 #define SUPER_MAGIC       0xEF53
 #define SUPER_USER        0
@@ -190,7 +190,7 @@ typedef struct semaphore{
 
 #define NMINODES          20
 #define NMOUNT             4
-#define NFD               10
+#define NFD               16
 #define NOFT              40
 #define NPIPE             10
 #define PSIZE            128
@@ -225,21 +225,21 @@ typedef struct pipe{
   int   nreader, nwriter;
   int   busy;
 }PIPE;
- 
+
 /******************** KCW on MINODE *******************
  refCount = # of procs using this MINODE
  lock is a semaphore for exclusive access to this MINODE
-              WHY lock? 
- When a proc issues disk I/O on a MINODE, it may gets 
+              WHY lock?
+ When a proc issues disk I/O on a MINODE, it may gets
  blocked while waiting for disk completion interrupt =>
- another proc may find the same MINODE and proceed to 
+ another proc may find the same MINODE and proceed to
  use it (before fully loaded) OR (even worse!) modify it.
  Hence the need of a lock.
- Unix uses a "locked" flag to sleep/wakeup. 
+ Unix uses a "locked" flag to sleep/wakeup.
  MTX uses a semaphore in each MINODE
 *****************************************************/
-typedef struct Minode{		
-  INODE    INODE; 
+typedef struct Minode{
+  INODE    INODE;
   int      dev, ino;
   int      refCount;
   int      dirty;
@@ -251,13 +251,13 @@ typedef struct Minode{
 typedef struct Mount{
         int    ninodes;
         int    nblocks;
-        int    dev, busy;   
+        int    dev, busy;
         struct Minode *mounted_inode;
-        char   name[32]; 
+        char   name[32];
         char   mount_name[32];
         // mounted dev's map & inodes_block numbers
         // although all EXT2 FS, these values may be different PER device
-        int    BMAP,IMAP,IBLOCK; 
+        int    BMAP,IMAP,IBLOCK;
 } MOUNT;
 
 
@@ -288,14 +288,14 @@ typedef struct pres{
         u32     *pgdir;           // per proc page_dir pointer
         u32     *new_pgdir;       // new_pgdir during exec with new size
 
-        MINODE *cwd;              // CWD 
-        char    name[32];         // name string 
+        MINODE *cwd;              // CWD
+        char    name[32];         // name string
         char    tty[32];          // opened /dev/ttyXX
   //int     tcount;           // process tcount
-        u32     signal;           // 15 signals=bits 1 to 14   
+        u32     signal;           // 15 signals=bits 1 to 14
         int     sig[NSIG];        // 15 signal handlers
         OFT     *fd[NFD];         // open file descriptors
-  struct semaphore mlock;         // message passing   
+  struct semaphore mlock;         // message passing
   struct semaphore message;
   struct mbuf     *mqueue;
 } PRES;
@@ -315,24 +315,24 @@ typedef struct proc{
   //  int    pid;
   int    ppid;
   int tcount;
-  
+
   int    event;
   int    exitCode;
-  int    vforked;    // whether the proc is VFROKED 
-  int    time;       // time slice  
+  int    vforked;    // whether the proc is VFROKED
+  int    time;       // time slice
   int    cpu;        // CPU time ticks used in ONE second
   int    type;       // PROCESS or THREAD
   int    pause;
   int dummy;
   struct proc *parent;
   struct proc  *proc;      // process ptr
-  struct pres  *res;       // per process resource pointer 
+  struct pres  *res;       // per process resource pointer
   struct semaphore *sem;   // ptr to semaphore currently BLOCKed on
   int    kstack[SSIZE];
 }PROC;
 
 /**********************************************************************
-pgdir of PROC in ARM: 
+pgdir of PROC in ARM:
 initial plan: each PROC has a dedicated pgdir at 6M or 7MB by pid
 in 7MB: 4KB for each pgdir ==> has space for 1m/4K= 256 pgdirs
 defined as pgdir[256], for P0 to P255
@@ -361,8 +361,8 @@ struct devtab{
 };
 
 struct hd {		// NOT used in ARM since NO HD drive yet
-  u16   opcode;		
-  u16   drive;	
+  u16   opcode;
+  u16   drive;
   u32    start_sector;
   u32    size;               // size in number of sectors
 };
@@ -389,7 +389,7 @@ struct buf{
   int opcode;             // READ | WRITE
   int dev,blk;
 
-  /********* these status variables could be changed to bits **********/  
+  /********* these status variables could be changed to bits **********/
   int dirty;
   int busy;
   int async;              //ASYNC write flag
@@ -449,18 +449,18 @@ extern int printList();
 typedef volatile struct uart{
   char *base;
 
-   // input buffer 
+   // input buffer
    char inbuf[BUFLEN];
    int inhead, intail;
   struct semaphore inchar;
 
-   // output buffer 
+   // output buffer
    char outbuf[BUFLEN];
    int outhead, outtail;
    struct semaphore outspace;
    int tx_on;
-   
-   // echo buffer 
+
+   // echo buffer
    char ebuf[BUFLEN];
    int ehead, etail, e_count;
 

@@ -24,8 +24,10 @@ int main(int argc, char* argv[])
                 int n;
                 while (n = read(fd, buf, 1024)) {
                     total += n;
-                    for (int i = 0; i < n; i++) {
-                        putc(buf[i]);
+                    if (isatty(STDOUT)) {
+                        prints(buf);
+                    } else {
+                        write(STDOUT, buf, n);
                     }
                 }
                 close(fd);
@@ -36,11 +38,13 @@ int main(int argc, char* argv[])
         char c;
         while (read(STDIN, &c, 1)) {
             total++;
-            if (c == '\r' && lc != '\n' && lc != '\r') {
-                putc('\n');
-                putc('\r');
+            if (isatty(STDOUT)) {
+                printc(c);
+                if (c == '\r') {
+                    printc('\n');
+                }
             } else {
-                putc(c);
+                write(STDOUT, &c, 1);
             }
         }
         lc = c;
