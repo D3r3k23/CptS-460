@@ -34,7 +34,6 @@ int echo(const char* line);
 int expand_variables(char* src);
 
 void sigint_handler(int sig);
-void write_console(const char* s);
 
 // Environment variables
 const char* USER = "";
@@ -160,10 +159,6 @@ int new_sh(void)
 
 int sh_line(const char* line)
 {
-    write_console("sh_line: ");
-    write_console(line);
-    write_console("\n\r");
-
     char pipe_components[8][TOKEN_LEN];
     int nPipe_components = tokenize(line, '|', pipe_components, 8);
     if (nPipe_components > 1) { // Has pipe
@@ -181,10 +176,6 @@ int sh_line(const char* line)
 
 int exec_cmd(const char* line)
 {
-    write_console("exec_cmd: ");
-    write_console(line);
-    write_console("\n\r");
-
     char tokens[16][TOKEN_LEN];
     int nTokens = tokenize(line, ' ', tokens, 16);
     const char* cmd = tokens[0];
@@ -221,9 +212,6 @@ int exec_cmd(const char* line)
             for (int i = 0; i < nArgs; i++) {
                 strjoin(cmd_line, " ", args[i]);
             }
-            write_console("exec(\"");
-            write_console(cmd_line);
-            write_console("\")\n\r");
             exec(cmd_line);
         } else {
             printf("unknown cmd: %s\n", cmd);
@@ -234,41 +222,26 @@ int exec_cmd(const char* line)
 
 int exec_pipe(const char* head, const char* tail)
 {
-    write_console("pipe: head=[");
-    write_console(head);
-    write_console("] tail=[");
-    write_console(tail);
-    write_console("]\n\r");
-
     // 1. Create pipe
     int pd[2];
     pipe(pd);
 
     int head_status = 0;
-    write_console("pipe: forking child\n\r");
     int pid = fork();
     if (pid) { // Parent: tail
-        write_console("pipe parent: activate reader for tail\n\r");
         activate_pipe(pd, PIPE_READER); // 2. Activate pipe reader for parent
         int status;
-        write_console("pipe parent: wait\n\r");
         int cpid = wait(&status); // 3. Wait for child to finish
-        if (cpid != pid) {
-            write_console("Error: wrong PID!\n");
-        }
         if (status) {
             head_status = status;
         }
     } else { // Child: head
-        write_console("pipe child: activate writer for head\n\r");
         activate_pipe(pd, PIPE_WRITER); // 4. Activate pipe writer for child
-        write_console("pipe child: run head\n\r");
         int r = sh_line(head); // 5. Run head
         exit(r);
     }
     // Parent
     if (head_status != -1) {
-        write_console("pipe parent: run tail\n\r");
         return exec_cmd(tail); // 6. Run tail
     } else {
         printf("pipe parent: child failed to run head\n");
@@ -444,14 +417,5 @@ void sigint_handler(int sig)
     if (1) {
         signal(SIGINT, sigint_handler);
         printf("^C\n");
-    }
-}
-
-void write_console(const char* s)
-{
-    int fd = open("dev/tty0", O_WRONLY);
-    if (fd != -1) {
-        write(fd, s, strlen(s));
-        close(fd);
     }
 }

@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     // write_console("CAT\n\r");
     int total = 0;
     if (argc >= 2) { // cat file
-        write_console("cat file\n\r");
+        // write_console("cat file\n\r");
         const char* filename = argv[1];
 
         STAT st;
@@ -31,27 +31,27 @@ int main(int argc, char* argv[])
                 printf("cat error: could not open %s\n", filename);
                 return -1;
             } else {
-                char buf[64];
+                char buf[2];
                 int n;
                 // write_console("START CATTING\n\r");
-                while (n = read(fd, buf, 63)) {
+                while (n = read(fd, buf, 1)) {
                     total += n;
                     if (isatty(STDOUT)) {
                         // write_console("WRITE CONSOLE\n\r");
                         prints(buf);
                     } else {
-                        write_console("WRITE:\n\r");
-                        write_console(buf);
+                        // write_console("WRITE:\n\r");
+                        // write_console(buf);
                         write(STDOUT, buf, n);
                     }
-                    bzero(buf, 64);
+                    bzero(buf, 2);
                 }
                 // write_console("FINSIH CATTING\n\r");
                 close(fd);
             }
         }
     } else { // cat stdin
-        write_console("cat stdin\n\r");
+        // write_console("cat stdin\n\r");
         char lc = '\0';
         char c;
         while (read(STDIN, &c, 1)) {
@@ -63,12 +63,12 @@ int main(int argc, char* argv[])
                 }
                 printc(c);
             } else {
-                write_console("WRITE\n\r");
+                // write_console("WRITE\n\r");
                 write(STDOUT, &c, 1);
             }
         }
         lc = c;
     }
-    write_console("CAT EXIT\n\r");
+    // write_console("CAT EXIT\n\r");
     return !total;
 }
