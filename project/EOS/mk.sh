@@ -28,8 +28,6 @@ sudo mount -o loop sdimage /mnt
 echo "cp test files"
 sudo cp -av test.sh /mnt/user/d3r3k
 sudo chown 4:4 /mnt/user/d3r3k/test.sh
-
-echo "sdimage /user/d3r3k:"
 ls -l /mnt/user/d3r3k
 
 echo "umount sdimage"
